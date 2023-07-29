@@ -27,31 +27,6 @@ class CSVViewer(): # Класс отвечает за обработку CSV ф�
             self.fileName,
             encoding=file_encoding,
         )
-    
-    def add_diff_column(self, x_col_name, y_col_name):
-        """
-        Функция добавляет новый столбец в DataFrame. Значения нового столбца это отношение np.gradient() dy/dx 
-        от переменных, выбранных для отрисовки графика x и y соответственно. Имя нового столбца образуется из 
-        названия столбца под переменной y и приставкой _diff в конце.
-        
-        Параметры:
-        x_col_name : str
-            Название столбца DataFrame, который используется как ось x для графика.
-        y_col_name : str
-            Название столбца DataFrame, который используется как ось y для графика.
-        """
-        if x_col_name == '' or y_col_name == '':
-            print('Please, select columns for X and Y before adding a diff column.')
-            return
-
-        # Рассчитываем производную y по x с помощью np.gradient()
-        y_values = self.df[y_col_name]
-        x_values = self.df[x_col_name]
-        dy_dx = np.gradient(y_values, x_values) * -1
-    
-        # Создаем новый столбец с производной и добавляем его в DataFrame
-        new_column_name = y_col_name + '_diff'
-        self.df[new_column_name] = dy_dx
 
     def plotGraph(self, x_column, y_column, figure, canvas):
         x = self.df[x_column]

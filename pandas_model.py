@@ -1,11 +1,12 @@
-from PyQt5.QtCore import Qt, QAbstractTableModel
+from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 
 class PandasModel(QAbstractTableModel):
     """
     Класс PandasModel, наследующий от QAbstractTableModel. Используется для взаимодействия 
     между pandas DataFrame и QTableView.
     """
-
+    dataChangedSignal = pyqtSignal()
+    
     def __init__(self, data, parent=None):
         """
         Инициализатор класса.
@@ -16,6 +17,7 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self._data = data
 
+        
     def rowCount(self, parent=None):
         """
         Возвращает количество строк в DataFrame.
@@ -60,7 +62,7 @@ class PandasModel(QAbstractTableModel):
             return self._data.columns[col]
         return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=Qt.EditRole):
         """
         Позволяет изменить данные в DataFrame.
 
@@ -68,14 +70,14 @@ class PandasModel(QAbstractTableModel):
         :param value: новое значение.
         :param role: роль данных.
         :return: True, если данные были успешно изменены, иначе False.
-        """
-        if index.isValid():
-            if role == Qt.EditRole:
-                row = index.row()
-                if 0 <= row < self._data.shape[0]:
-                    column = index.column()
-                    self._data.iat[row, column] = value
-                    return True
+        """        
+        row = index.row()
+        col = index.column()
+
+        if role == Qt.EditRole:
+            self._data.iat[row, col] = value
+            self.dataChanged.emit(index, index)
+            return True
         return False
 
     def flags(self, index):
