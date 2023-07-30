@@ -8,6 +8,11 @@ import pandas as pd
 from math_operations import MathOperations
 from ui import UIInitializer 
 
+# Импортируем matplotlib и применяем стиль
+import matplotlib.pyplot as plt
+import scienceplots
+plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
+
 
 class MainApp(QWidget): 
     """Главное приложение."""
@@ -81,10 +86,16 @@ class MainApp(QWidget):
 
     def plotGraph(self):
         """Построение графика."""
+        x_column = self.uiInitializer.comboBoxX.currentText()
+        y_column = self.uiInitializer.comboBoxY.currentText()
+
+        if not x_column or not y_column:  # Если одно из значений пустое, прекратить функцию
+            return
+
         self.uiInitializer.figure.clear()
         
         ax = self.uiInitializer.figure.add_subplot(111)
-        ax.plot(self.viewer.df[self.uiInitializer.comboBoxX.currentText()], self.viewer.df[self.uiInitializer.comboBoxY.currentText()], 'b-')
+        ax.plot(self.viewer.df[x_column], self.viewer.df[y_column], 'b-')
         
         self.uiInitializer.canvas.draw()
 

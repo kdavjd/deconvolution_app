@@ -1,4 +1,3 @@
-# csv_viewer.py
 from PyQt5.QtWidgets import QFileDialog
 import os
 import pandas as pd

@@ -9,7 +9,7 @@ class UIInitializer(QWidget):
         super().__init__(parent)
 
         self.setMinimumSize(QSize(1080, 920))  
-        
+
         self.buttonLoadCSV = QPushButton('Load CSV', self)
         self.buttonLoadCSV.clicked.connect(parent.getCSV)
 
@@ -18,9 +18,9 @@ class UIInitializer(QWidget):
 
         self.labelY = QLabel('Select Y:', self)
         self.comboBoxY = QComboBox()
-
-        self.buttonPlot = QPushButton('Plot', self)
-        self.buttonPlot.clicked.connect(parent.plotGraph)
+        
+        self.comboBoxX.currentIndexChanged.connect(parent.plotGraph)
+        self.comboBoxY.currentIndexChanged.connect(parent.plotGraph)
 
         self.buttonInteractive = QPushButton('Interactive Mode', self)
         self.buttonInteractive.setCheckable(True)
@@ -42,14 +42,13 @@ class UIInitializer(QWidget):
 
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(self.buttonLoadCSV)
-        buttons_layout.addWidget(self.buttonPlot)
         buttons_layout.addWidget(self.buttonInteractive)
+        buttons_layout.addWidget(self.buttonAddDiff)
+        buttons_layout.addWidget(self.buttonDeleteColumn)
         buttons_layout.addWidget(self.labelX)
         buttons_layout.addWidget(self.comboBoxX)        
         buttons_layout.addWidget(self.labelY)
-        buttons_layout.addWidget(self.comboBoxY)
-        buttons_layout.addWidget(self.buttonAddDiff)
-        buttons_layout.addWidget(self.buttonDeleteColumn)
+        buttons_layout.addWidget(self.comboBoxY)        
 
         top_layout.addLayout(buttons_layout)
 
