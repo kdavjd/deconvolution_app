@@ -8,6 +8,9 @@ class MathOperations:
     @staticmethod
     def gaussian(x, a0, a1, a2):
         """Гауссовская функция."""
+        a0 = max(0, float(a0))
+        a1 = max(0, float(a1))
+        a2 = max(0, float(a2))
         a0, a1, a2 = max(0, float(a0)), float(a1), float(a2)
         return a0 * np.exp(-((x - a1) ** 2) / (2 * a2 ** 2))
 
@@ -20,6 +23,8 @@ class MathOperations:
     @staticmethod
     def fraser_suzuki(x, a0, a1, a2, a3):
         a0 = max(0, float(a0))
+        a1 = max(0, float(a1))
+        a2 = max(0, float(a2))
         with np.errstate(divide='ignore', invalid='ignore'):
             result = a0 * np.exp(-np.log(2)*((np.log(1+2*a3*((x-a1)/a2))/a3)**2))
         result = np.nan_to_num(result, nan=0)
