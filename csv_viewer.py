@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QFileDialog
 import os
 import pandas as pd
 import chardet
-import numpy as np
 
 class CSVViewer(): # Класс отвечает за обработку CSV файлов.
     def __init__(self):
@@ -26,19 +25,10 @@ class CSVViewer(): # Класс отвечает за обработку CSV ф�
             self.fileName,
             encoding=file_encoding,
         )
-
-    def plotGraph(self, x_column, y_column, figure, canvas):
-        x = self.df[x_column]
-        y = self.df[y_column]
-
-        # Очищаем текущий график
-        figure.clear()
-
-        # Создаем новый график
-        ax = figure.add_subplot(111)
-
-        # Отрисовываем график
-        ax.plot(x, y, '*-')
-
-        # Обновляем область отображения графика
-        canvas.draw()
+        
+    def exportCSV(self):
+        # Эта функция экспортирует текущий DataFrame в файл CSV.
+        self.fileName, _ = QFileDialog.getSaveFileName(None, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)')
+        if self.fileName:
+            self.df.to_csv(self.fileName, index=False, encoding='utf-8')
+   

@@ -13,6 +13,12 @@ class UIInitializer(QWidget):
         self.buttonLoadCSV = QPushButton('Load CSV', self)
         self.buttonLoadCSV.clicked.connect(parent.getCSV)
 
+        self.buttonExportCSV = QPushButton('Export CSV', self)
+        self.buttonExportCSV.clicked.connect(parent.exportCSV)        
+        
+        self.buttonComputePeaks = QPushButton('Compute peaks', self)
+        self.buttonComputePeaks.clicked.connect(parent.computePeaks)        
+        
         self.labelX = QLabel('Select X:', self)
         self.comboBoxX = QComboBox()
 
@@ -36,23 +42,27 @@ class UIInitializer(QWidget):
         self.buttonDeleteColumn = QPushButton('Delete X column', self)
         self.buttonDeleteColumn.clicked.connect(parent.deleteColumn)
 
-        main_layout = QVBoxLayout()
+        main_layout = QVBoxLayout()        
+
+        buttons_layout_1 = QVBoxLayout()
+        buttons_layout_1.addWidget(self.buttonLoadCSV)
+        buttons_layout_1.addWidget(self.buttonInteractive)
+        buttons_layout_1.addWidget(self.buttonAddDiff)
+        buttons_layout_1.addWidget(self.buttonDeleteColumn)
+        buttons_layout_1.addWidget(self.labelX)
+        buttons_layout_1.addWidget(self.comboBoxX)
+
+        buttons_layout_2 = QVBoxLayout()
+        buttons_layout_2.addWidget(self.buttonExportCSV)        
+        buttons_layout_2.addWidget(self.buttonComputePeaks)
+        buttons_layout_2.addWidget(self.labelY)
+        buttons_layout_2.addWidget(self.comboBoxY)
+        
 
         top_layout = QHBoxLayout()
-
-        buttons_layout = QVBoxLayout()
-        buttons_layout.addWidget(self.buttonLoadCSV)
-        buttons_layout.addWidget(self.buttonInteractive)
-        buttons_layout.addWidget(self.buttonAddDiff)
-        buttons_layout.addWidget(self.buttonDeleteColumn)
-        buttons_layout.addWidget(self.labelX)
-        buttons_layout.addWidget(self.comboBoxX)        
-        buttons_layout.addWidget(self.labelY)
-        buttons_layout.addWidget(self.comboBoxY)        
-
-        top_layout.addLayout(buttons_layout)
-
-        top_layout.addWidget(parent.tableManager.stacked_widget)
+        top_layout.addLayout(buttons_layout_1)
+        top_layout.addLayout(buttons_layout_2)
+        top_layout.addWidget(parent.tableManager.stacked_widget)        
 
         main_layout.addLayout(top_layout)
 

@@ -86,7 +86,11 @@ class TableManager:
         """
         # Создаем новую строку данных
         row_data = pd.DataFrame({'Reaction': [f'Reaction_{self.gaussian_data.shape[0] + 1}'], 
-                                 'Height': [height], 'Center': [center], 'Width': [width]})
+                                 'Height': [height],
+                                 'Center': [center],
+                                 'Width': [width],
+                                 'Type':['gauss']
+                                 })
         
         # Добавляем новую строку в данные
         self.gaussian_data = pd.concat([self.gaussian_data, row_data], ignore_index=True)
