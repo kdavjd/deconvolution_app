@@ -99,41 +99,28 @@ class TableManager:
         self.gaussian_model = PandasModel(self.gaussian_data)
         self.gaussian_table.setModel(self.gaussian_model)
 
-    def deleteColumn(self, comboBoxX, comboBoxY, currentIndex):
-        """
-        Удаление колонки из таблицы.
+    def deleteRow(self, row_number):
+        """Удаление строки из активного DataFrame."""
+        if self.stacked_widget.currentIndex() == 0:  # Если активна таблица CSV
+            self.viewer.df = self.viewer.df.drop(self.viewer.df.index[row_number])
+            self.csv_model = PandasModel(self.viewer.df)
+            self.csv_table.setModel(self.csv_model)
+        elif self.stacked_widget.currentIndex() == 1:  # Если активна таблица Gaus
+            self.gaussian_data = self.gaussian_data.drop(self.gaussian_data.index[row_number])
+            self.gaussian_model = PandasModel(self.gaussian_data)
+            self.gaussian_table.setModel(self.gaussian_model)
 
-        Удаляет выбранный столбец из данных CSV или выбранную строку из данных о гауссовых кривых.
-
-        Параметры:
-        -----------
-        comboBoxX : QComboBox
-            Комбобокс для выбора столбца X.
-        comboBoxY : QComboBox
-            Комбобокс для выбора столбца Y.
-        currentIndex : int
-            Индекс текущего выбранного виджета в stacked_widget.
-        """
-        # Если текущий выбранный виджет - это таблица CSV
-        if currentIndex == 0:
-            # Удаляем выбранный столбец из данных
-            self.viewer.df.drop([comboBoxX.currentText()], axis=1, inplace=True)
-
-            # Обновляем таблицу и комбобоксы
-            self.fillTable()
-            self.fillComboBoxes(comboBoxX, comboBoxY)
-        
-        # Если текущий выбранный виджет - это таблица с гауссовыми кривыми
-        elif currentIndex == 1:
-            # Проверяем, выбрана ли строка в таблице
-            if self.gaussian_table.currentIndex().row() >= 0:
-                # Удаляем выбранную строку из данных
-                self.gaussian_data.drop(self.gaussian_table.currentIndex().row(), inplace=True)
-
-                # Обновляем индексы в данных
-                self.gaussian_data.reset_index(drop=True, inplace=True)
-
-                # Обновляем модель данных
-                self.gaussian_model = PandasModel(self.gaussian_data)
-                self.gaussian_table.setModel(self.gaussian_model)
+    def deleteColumn(self, column_number):
+        """Удаление столбца из активного DataFrame."""
+        column_name = None
+        if self.stacked_widget.currentIndex() == 0:  # Если активна таблица CSV
+            column_name = self.viewer.df.columns[column_number]
+            self.viewer.df = self.viewer.df.drop(columns=[column_name])
+            self.csv_model = PandasModel(self.viewer.df)
+            self.csv_table.setModel(self.csv_model)
+        elif self.stacked_widget.currentIndex() == 1:  # Если активна таблица Gaus
+            column_name = self.gaussian_data.columns[column_number]
+            self.gaussian_data = self.gaussian_data.drop(columns=[column_name])
+            self.gaussian_model = PandasModel(self.gaussian_data)
+            self.gaussian_table.setModel(self.gaussian_model)
 

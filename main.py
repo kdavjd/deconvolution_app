@@ -1,5 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtCore import Qt
 from csv_viewer import CSVViewer
 from pandas_model import PandasModel
 from table_manager import TableManager
@@ -26,6 +27,20 @@ class MainApp(QWidget):
         self.tableManager.gaussian_model.dataChangedSignal.connect(self.rebuildGaussians)
         self.math_operations = MathOperations()
         self.uiInitializer = UIInitializer(self)
+
+        self.connectSignals()
+
+    def connectSignals(self):
+        """Подключение сигналов."""        
+        self.tableManager.gaussian_table.clicked.connect(self.handleTableClicked)
+        self.tableManager.csv_table.clicked.connect(self.handleTableClicked)
+        
+    def handleTableClicked(self, qModelIndex):
+        """Обработка клика по таблице."""
+        if QApplication.keyboardModifiers() == Qt.ControlModifier:
+            self.tableManager.deleteRow(qModelIndex.row())
+        elif QApplication.keyboardModifiers() == Qt.AltModifier:
+            self.tableManager.deleteColumn(qModelIndex.column())
 
     def getCSV(self):
         """Получение данных из CSV."""
