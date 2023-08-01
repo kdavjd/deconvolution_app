@@ -34,7 +34,7 @@ class MainApp(QWidget):
         """Подключение сигналов."""        
         self.tableManager.gaussian_table.clicked.connect(self.handleTableClicked)
         self.tableManager.csv_table.clicked.connect(self.handleTableClicked)
-        
+
     def handleTableClicked(self, qModelIndex):
         """Обработка клика по таблице."""
         if QApplication.keyboardModifiers() == Qt.ControlModifier:
@@ -51,21 +51,29 @@ class MainApp(QWidget):
     def exportCSV(self):
         """Экспорт данных в CSV."""
         self.viewer.exportCSV()
-        
-    def interactiveMode(self, activated):
-        """Интерактивный режим."""
-        if activated:
-            self.tableManager.stacked_widget.setCurrentIndex(1)
-            self.press_cid = self.uiInitializer.canvas.mpl_connect('button_press_event', self.on_press)
-            self.release_cid = self.uiInitializer.canvas.mpl_connect('button_release_event', self.on_release)
-        else:
-            self.tableManager.stacked_widget.setCurrentIndex(0)
-            self.uiInitializer.canvas.mpl_disconnect(self.press_cid)
-            self.uiInitializer.canvas.mpl_disconnect(self.release_cid)
-            self.rebuildGaussians()
 
-    def on_press(self, event):
-        """Событие при нажатии кнопки мыши на оси."""
+    def switchToInteractiveMode(self, activated):
+        """Переключение на интерактивный режим."""
+        if activated:
+            self.connectCanvasEvents()
+        else:
+            self.disconnectCanvasEvents()
+
+    def connectCanvasEvents(self):
+        """Подключение событий холста."""
+        self.tableManager.stacked_widget.setCurrentIndex(1)
+        self.press_cid = self.uiInitializer.canvas.mpl_connect('button_press_event', self.onPress)
+        self.release_cid = self.uiInitializer.canvas.mpl_connect('button_release_event', self.onRelease)
+
+    def disconnectCanvasEvents(self):
+        """Отключение событий холста."""
+        self.tableManager.stacked_widget.setCurrentIndex(0)
+        self.uiInitializer.canvas.mpl_disconnect(self.press_cid)
+        self.uiInitializer.canvas.mpl_disconnect(self.release_cid)
+        self.rebuildGaussians()
+
+    def onPress(self, event):
+        """Обработка нажатия кнопки мыши на оси."""
         self.press_x = event.xdata
         self.press_y = event.ydata
 
@@ -77,8 +85,8 @@ class MainApp(QWidget):
         else:
             raise ValueError(f"Column {column_name} contains non-numeric data")
 
-    def on_release(self, event):
-        """Событие при отпускании кнопки мыши."""
+    def onRelease(self, event):
+        """Обработка отпускания кнопки мыши."""
         release_x = event.xdata
         width = 2 * abs(release_x - self.press_x)
         x_column_data = self.get_column_data(self.uiInitializer.comboBoxX.currentText())
@@ -105,7 +113,6 @@ class MainApp(QWidget):
             ax.plot(x, y, 'r-')
 
         self.uiInitializer.canvas.draw()
-
 
     def computePeaks(self):
         """Вычисление лучших пиков с помощью функции compute_best_peaks и замена данных в gaussian_data."""

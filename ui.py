@@ -36,7 +36,7 @@ class UIInitializer(QWidget):
 
         self.buttonInteractive = QPushButton('Interactive Mode', self)
         self.buttonInteractive.setCheckable(True)
-        self.buttonInteractive.clicked.connect(parent.interactiveMode)
+        self.buttonInteractive.clicked.connect(parent.switchToInteractiveMode)
 
         self.buttonAddDiff = QPushButton('Add Diff', self)
         self.buttonAddDiff.clicked.connect(parent.addDiff)
