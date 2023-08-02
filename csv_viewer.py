@@ -7,11 +7,18 @@ class CSVViewer(): # Класс отвечает за обработку CSV ф�
     def __init__(self):
         self.df = pd.DataFrame() # Создаем пустой DataFrame для хранения данных.
 
+    def initialize(self, tableManager, uiInitializer):
+        # Устанавливаем ссылки на tableManager и uiInitializer
+        self.tableManager = tableManager
+        self.uiInitializer = uiInitializer
+
     def getCSV(self):
         # Эта функция загружает CSV файл, выбранный пользователем в главном окне приложения.        
         self.fileName, _ = QFileDialog.getOpenFileName(None, 'Open CSV', os.getenv('HOME'), 'CSV(*.csv)')
         if self.fileName:
             self.loadCSV()
+            self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
+            self.tableManager.fillTable()
 
     def loadCSV(self):
         # Эта функция считывает данные из CSV файла и сохраняет их в DataFrame.

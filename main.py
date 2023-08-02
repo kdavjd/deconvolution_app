@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from math_operations import MathOperations
 from ui import UIInitializer 
+from event_handler import EventHandler
 
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
@@ -22,61 +23,29 @@ class MainApp(QWidget):
         """Инициализация класса."""
         super().__init__()
 
+        # Создаем экземпляр CSVViewer без аргументов
         self.viewer = CSVViewer()
+
+        # Создаем другие объекты, передавая в них ссылку на viewer
         self.tableManager = TableManager(self.viewer)
-        self.tableManager.gaussian_model.dataChangedSignal.connect(self.rebuildGaussians)
+        self.uiInitializer = UIInitializer(self, self.viewer)
+
+        # Инициализируем CSVViewer, передав в него ссылки на tableManager и uiInitializer
+        self.viewer.initialize(self.tableManager, self.uiInitializer)
+
         self.math_operations = MathOperations()
-        self.uiInitializer = UIInitializer(self)
+        self.eventHandler = EventHandler(self)
 
-        self.connectSignals()
-
-    def connectSignals(self):
-        """Подключение сигналов."""        
-        self.tableManager.gaussian_table.clicked.connect(self.handleTableClicked)
-        self.tableManager.csv_table.clicked.connect(self.handleTableClicked)
-
-    def handleTableClicked(self, qModelIndex):
-        """Обработка клика по таблице."""
-        if QApplication.keyboardModifiers() == Qt.ControlModifier:
-            self.tableManager.deleteRow(qModelIndex.row())
-        elif QApplication.keyboardModifiers() == Qt.AltModifier:
-            self.tableManager.deleteColumn(qModelIndex.column())
-
-    def getCSV(self):
-        """Получение данных из CSV."""
-        self.viewer.getCSV()
-        self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
-        self.tableManager.fillTable()
-
-    def exportCSV(self):
-        """Экспорт данных в CSV."""
-        self.viewer.exportCSV()
+        self.tableManager.gaussian_model.dataChangedSignal.connect(self.rebuildGaussians)
+        self.eventHandler.connectSignals() 
 
     def switchToInteractiveMode(self, activated):
         """Переключение на интерактивный режим."""
         if activated:
-            self.connectCanvasEvents()
+            self.eventHandler.connectCanvasEvents()
         else:
-            self.disconnectCanvasEvents()
-
-    def connectCanvasEvents(self):
-        """Подключение событий холста."""
-        self.tableManager.stacked_widget.setCurrentIndex(1)
-        self.press_cid = self.uiInitializer.canvas.mpl_connect('button_press_event', self.onPress)
-        self.release_cid = self.uiInitializer.canvas.mpl_connect('button_release_event', self.onRelease)
-
-    def disconnectCanvasEvents(self):
-        """Отключение событий холста."""
-        self.tableManager.stacked_widget.setCurrentIndex(0)
-        self.uiInitializer.canvas.mpl_disconnect(self.press_cid)
-        self.uiInitializer.canvas.mpl_disconnect(self.release_cid)
-        self.rebuildGaussians()
-
-    def onPress(self, event):
-        """Обработка нажатия кнопки мыши на оси."""
-        self.press_x = event.xdata
-        self.press_y = event.ydata
-
+            self.eventHandler.disconnectCanvasEvents()
+    
     def get_column_data(self, column_name):
         column_data = self.viewer.df[column_name]
         # Проверяем, являются ли данные числовыми
@@ -84,21 +53,7 @@ class MainApp(QWidget):
             return column_data
         else:
             raise ValueError(f"Column {column_name} contains non-numeric data")
-
-    def onRelease(self, event):
-        """Обработка отпускания кнопки мыши."""
-        release_x = event.xdata
-        width = 2 * abs(release_x - self.press_x)
-        x_column_data = self.get_column_data(self.uiInitializer.comboBoxX.currentText())
-        x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-        y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
-
-        ax = self.uiInitializer.figure.get_axes()[0]
-        ax.plot(x, y, 'r-')
-        self.uiInitializer.canvas.draw()
-        
-        self.tableManager.add_gaussian_to_table(self.press_y, self.press_x, width)
-
+  
     def rebuildGaussians(self):
         """Перестроение всех гауссиан по данным в таблице."""
         self.plotGraph()  # очистим график        

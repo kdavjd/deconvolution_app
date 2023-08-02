@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 
 
 class UIInitializer(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, viewer): 
         super().__init__(parent)
 
         # Установка минимального размера окна
@@ -13,10 +13,10 @@ class UIInitializer(QWidget):
 
         # Создание кнопок и выпадающих списков
         self.buttonLoadCSV = QPushButton('Load CSV', self)
-        self.buttonLoadCSV.clicked.connect(parent.getCSV)
+        self.buttonLoadCSV.clicked.connect(viewer.getCSV) 
 
         self.buttonExportCSV = QPushButton('Export CSV', self)
-        self.buttonExportCSV.clicked.connect(parent.exportCSV)        
+        self.buttonExportCSV.clicked.connect(viewer.exportCSV)     
         
         self.buttonDeleteColumn = QPushButton('Delete X column', self)
         self.buttonDeleteColumn.clicked.connect(parent.deleteColumn)
