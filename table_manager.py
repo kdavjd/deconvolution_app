@@ -81,6 +81,31 @@ class TableManager:
         comboBoxX.addItems(self.viewer.df.columns)
         comboBoxY.addItems(self.viewer.df.columns)
 
+    def get_column_data(self, column_name):
+        column_data = self.viewer.df[column_name]
+        # Проверяем, являются ли данные числовыми
+        if pd.to_numeric(column_data, errors='coerce').notna().all():
+            return column_data
+        else:
+            raise ValueError(f"Column {column_name} contains non-numeric data")
+
+    def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func, math_operations):
+        for i, peak_type in enumerate(best_combination):
+            a0 = best_params[3 * i]
+            a1 = best_params[3 * i + 1]
+            a2 = best_params[3 * i + 2]
+
+            new_column_name = y_column + '_reaction_' + str(i)
+            if peak_type == 'gauss':
+                peak_func = math_operations.gaussian(x_values, a0, a1, a2)
+            else:
+                peak_func = math_operations.fraser_suzuki(x_values, a0, a1, a2, -1)
+            self.viewer.df[new_column_name] = peak_func
+            cummulative_func += peak_func
+
+        new_column_name = y_column + '_cummulative'
+        self.viewer.df[new_column_name] = cummulative_func
+    
     def add_gaussian_to_table(self, height, center, width):
         """
         Добавление гауссовской функции в таблицу.

@@ -20,7 +20,7 @@ class EventHandler:
         """Обработка отпускания кнопки мыши."""
         release_x = event.xdata
         width = 2 * abs(release_x - self.press_x)
-        x_column_data = self.mainApp.get_column_data(self.mainApp.uiInitializer.comboBoxX.currentText())
+        x_column_data = self.mainApp.tableManager.get_column_data(self.mainApp.uiInitializer.comboBoxX.currentText())
         x = np.linspace(min(x_column_data), max(x_column_data), 1000)
         y = self.mainApp.math_operations.gaussian(x, self.press_y, self.press_x, width)
 
