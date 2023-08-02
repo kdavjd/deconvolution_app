@@ -18,7 +18,7 @@ class CSVViewer(): # Класс отвечает за обработку CSV ф�
         if self.fileName:
             self.loadCSV()
             self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
-            self.tableManager.fillTable()
+            self.tableManager.fillMainTable()
 
     def loadCSV(self):
         # Эта функция считывает данные из CSV файла и сохраняет их в DataFrame.

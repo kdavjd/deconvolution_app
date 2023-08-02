@@ -36,7 +36,7 @@ class TableManager:
         self.stacked_widget.addWidget(self.csv_table)
         self.stacked_widget.addWidget(self.gaussian_table)
 
-    def fillTable(self):
+    def fillMainTable(self):
         """
         Заполнение таблицы данными.
 
@@ -47,6 +47,18 @@ class TableManager:
 
         # Устанавливаем модель данных для таблицы CSV
         self.csv_table.setModel(self.csv_model)
+        
+    def fillGaussTable(self):
+        """
+        Заполнение таблицы данными.
+
+        Использует данные из объекта viewer, чтобы заполнить таблицу csv.
+        """
+        # Создаем модель данных на основе данных CSV
+        self.gaussian_model = PandasModel(self.gaussian_data)
+
+        # Устанавливаем модель данных для таблицы CSV
+        self.gaussian_table.setModel(self.gaussian_model)
 
     def fillComboBoxes(self, comboBoxX, comboBoxY):
         """

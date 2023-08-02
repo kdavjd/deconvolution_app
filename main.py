@@ -69,57 +69,56 @@ class MainApp(QWidget):
 
         self.uiInitializer.canvas.draw()
 
-    def computePeaks(self):
-        """Вычисление лучших пиков с помощью функции compute_best_peaks и замена данных в gaussian_data."""
-        # Считывание и формирование начальных параметров
+    def init_params(self):
         init_params = []
         for _, row in self.tableManager.gaussian_data.iterrows():
             init_params.extend([row['Height'], row['Center'], row['Width']])
-        
-        x_column = self.uiInitializer.comboBoxX.currentText()
-        y_column = self.uiInitializer.comboBoxY.currentText()
-        
-        x_values = self.get_column_data(x_column)
-        y_values = self.get_column_data(y_column)
-        
-        # Вызов функции compute_best_peaks
-        best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(x_values, y_values, init_params)
+        return init_params
 
-        # Создание нулевого массива для суммирования всех функций peak_func
-        cummulative_func = np.zeros(len(x_values))
-
-        # Изменение данных в gaussian_data
+    def update_gaussian_data(self, best_params, best_combination):
         for i, peak_type in enumerate(best_combination):
             a0 = best_params[3*i]
             a1 = best_params[3*i+1]
             a2 = best_params[3*i+2]
-
-            # Обновление строки в gaussian_data
             self.tableManager.gaussian_data.at[i, 'Height'] = a0
             self.tableManager.gaussian_data.at[i, 'Center'] = a1
             self.tableManager.gaussian_data.at[i, 'Width'] = a2
             self.tableManager.gaussian_data.at[i, 'Type'] = peak_type
 
-            new_column_name = y_column + '_reaction_' + str(i)
+    def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
+        for i, peak_type in enumerate(best_combination):
+            a0 = best_params[3*i]
+            a1 = best_params[3*i+1]
+            a2 = best_params[3*i+2]
 
+            new_column_name = y_column + '_reaction_' + str(i)
             if peak_type == 'gauss':
                 peak_func = self.math_operations.gaussian(x_values, a0, a1, a2)
             else:
                 peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, -1)
-
-            # Сохраняем функцию в новом столбце
             self.tableManager.viewer.df[new_column_name] = peak_func
-
-            # Суммируем значения всех функций
             cummulative_func += peak_func
 
-        # Сохраняем результат суммирования всех peak_func
         new_column_name = y_column + '_cummulative'
         self.tableManager.viewer.df[new_column_name] = cummulative_func
 
+    def computePeaks(self):
+        init_params = self.init_params()
+        x_column = self.uiInitializer.comboBoxX.currentText()
+        y_column = self.uiInitializer.comboBoxY.currentText()
+        x_values = self.get_column_data(x_column)
+        y_values = self.get_column_data(y_column)
+
+        best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(x_values, y_values, init_params)
+        cummulative_func = np.zeros(len(x_values))
+
+        self.update_gaussian_data(best_params, best_combination)
+        self.add_reaction_cummulative_func(best_params, best_combination, x_values, y_column, cummulative_func)
+
         # Обновление модели данных
-        self.tableManager.gaussian_model = PandasModel(self.tableManager.gaussian_data)
-        self.tableManager.gaussian_table.setModel(self.tableManager.gaussian_model)
+        self.tableManager.fillGaussTable()        
+        self.tableManager.fillMainTable()
+        self.rebuildGaussians()
     
     def plotGraph(self):
         """Построение графика."""
@@ -143,7 +142,7 @@ class MainApp(QWidget):
         dy_dx = self.math_operations.compute_derivative(self.viewer.df[x_column], self.viewer.df[y_column])
         new_column_name = y_column + '_diff'        
         self.viewer.df[new_column_name] = dy_dx
-        self.tableManager.fillTable()
+        self.tableManager.fillMainTable()
         self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
 
 if __name__ == '__main__':
