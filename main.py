@@ -23,17 +23,17 @@ class MainApp(QWidget):
         """Инициализация класса."""
         super().__init__()
 
-        # Создаем экземпляр CSVViewer без аргументов
+        # Создаем экземпляры без аргументов
         self.viewer = CSVViewer()
-
+        self.math_operations = MathOperations()
+        
         # Создаем другие объекты, передавая в них ссылку на viewer
-        self.tableManager = TableManager(self.viewer)
+        self.tableManager = TableManager(self.viewer, self.math_operations)
         self.uiInitializer = UIInitializer(self, self.viewer)
 
         # Инициализируем CSVViewer, передав в него ссылки на tableManager и uiInitializer
         self.viewer.initialize(self.tableManager, self.uiInitializer)
-
-        self.math_operations = MathOperations()
+        
         self.eventHandler = EventHandler(self)
 
         self.tableManager.gaussian_model.dataChangedSignal.connect(self.rebuildGaussians)
@@ -45,8 +45,7 @@ class MainApp(QWidget):
             self.eventHandler.connectCanvasEvents()
         else:
             self.eventHandler.disconnectCanvasEvents()
-    
-      
+          
     def rebuildGaussians(self):
         """Перестроение всех гауссиан по данным в таблице."""
         self.plotGraph()  # очистим график        
@@ -62,38 +61,10 @@ class MainApp(QWidget):
 
         self.uiInitializer.canvas.draw()
 
-    def init_params(self):
-        init_params = []
-        for _, row in self.tableManager.gaussian_data.iterrows():
-            init_params.extend([row['Height'], row['Center'], row['Width']])
-        return init_params
-
-    def update_gaussian_data(self, best_params, best_combination):
-        for i, peak_type in enumerate(best_combination):
-            a0 = best_params[3*i]
-            a1 = best_params[3*i+1]
-            a2 = best_params[3*i+2]
-            self.tableManager.gaussian_data.at[i, 'Height'] = a0
-            self.tableManager.gaussian_data.at[i, 'Center'] = a1
-            self.tableManager.gaussian_data.at[i, 'Width'] = a2
-            self.tableManager.gaussian_data.at[i, 'Type'] = peak_type   
-
     def computePeaks(self):
-        init_params = self.init_params()
         x_column = self.uiInitializer.comboBoxX.currentText()
         y_column = self.uiInitializer.comboBoxY.currentText()
-        x_values = self.tableManager.get_column_data(x_column)
-        y_values = self.tableManager.get_column_data(y_column)
-
-        best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(x_values, y_values, init_params)
-        cummulative_func = np.zeros(len(x_values))
-
-        self.update_gaussian_data(best_params, best_combination)
-        self.tableManager.add_reaction_cummulative_func(best_params, best_combination, x_values, y_column, cummulative_func, self.math_operations)
-
-        # Обновление модели данных
-        self.tableManager.fillGaussTable()        
-        self.tableManager.fillMainTable()
+        self.tableManager.computePeaks(x_column, y_column)
         self.rebuildGaussians()
     
     def plotGraph(self):
@@ -112,15 +83,9 @@ class MainApp(QWidget):
         self.uiInitializer.canvas.draw()
 
     def addDiff(self):
-        """Добавление дифференцирования."""
         x_column = self.uiInitializer.comboBoxX.currentText()
         y_column = self.uiInitializer.comboBoxY.currentText()
-        dy_dx = self.math_operations.compute_derivative(self.viewer.df[x_column], self.viewer.df[y_column])
-        new_column_name = y_column + '_diff'
-        self.viewer.df[new_column_name] = dy_dx
-        self.tableManager.fillMainTable()
-        self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
-        self.uiInitializer.comboBoxY.setCurrentText(new_column_name) 
+        self.tableManager.addDiff(x_column, y_column, self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
