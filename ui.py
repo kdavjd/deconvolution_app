@@ -16,10 +16,7 @@ class UIInitializer(QWidget):
         self.buttonLoadCSV.clicked.connect(viewer.getCSV) 
 
         self.buttonExportCSV = QPushButton('Export CSV', self)
-        self.buttonExportCSV.clicked.connect(viewer.exportCSV)     
-        
-        self.buttonDeleteColumn = QPushButton('Delete X column', self)
-        self.buttonDeleteColumn.clicked.connect(parent.deleteColumn)
+        self.buttonExportCSV.clicked.connect(viewer.exportCSV)         
 
         self.buttonComputePeaks = QPushButton('Compute peaks', self)
         self.buttonComputePeaks.clicked.connect(parent.computePeaks)  
@@ -44,8 +41,7 @@ class UIInitializer(QWidget):
         # Создание блока с кнопками и выпадающими списками
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(self.buttonLoadCSV)
-        buttons_layout.addWidget(self.buttonExportCSV)
-        buttons_layout.addWidget(self.buttonDeleteColumn)
+        buttons_layout.addWidget(self.buttonExportCSV)        
         buttons_layout.addWidget(self.buttonComputePeaks)
         buttons_layout.addWidget(self.buttonInteractive)
         buttons_layout.addWidget(self.buttonAddDiff)

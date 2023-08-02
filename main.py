@@ -146,10 +146,6 @@ class MainApp(QWidget):
         self.tableManager.fillTable()
         self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
 
-    def deleteColumn(self):
-        """Удаление колонки."""
-        self.tableManager.deleteColumn(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY, self.tableManager.stacked_widget.currentIndex())
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MainApp()
