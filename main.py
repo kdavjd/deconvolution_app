@@ -140,10 +140,11 @@ class MainApp(QWidget):
         x_column = self.uiInitializer.comboBoxX.currentText()
         y_column = self.uiInitializer.comboBoxY.currentText()
         dy_dx = self.math_operations.compute_derivative(self.viewer.df[x_column], self.viewer.df[y_column])
-        new_column_name = y_column + '_diff'        
+        new_column_name = y_column + '_diff'
         self.viewer.df[new_column_name] = dy_dx
         self.tableManager.fillMainTable()
         self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
+        self.uiInitializer.comboBoxY.setCurrentText(new_column_name) 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
