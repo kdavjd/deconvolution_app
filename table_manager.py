@@ -28,50 +28,27 @@ class TableManager:
         self.stacked_widget.addWidget(self.csv_table)
         self.stacked_widget.addWidget(self.gaussian_table)
 
-    def fillMainTable(self):
+    def fill_main_table(self):  # Было: fillMainTable
         """
-        Заполнение таблицы данными.
-
-        Использует данные из объекта viewer, чтобы заполнить таблицу csv.
+        Заполнение основной таблицы данными из объекта viewer.
+        Используется для обновления представления основной таблицы.
         """
-        # Создаем модель данных на основе данных CSV
         self.csv_model = PandasModel(self.viewer.df)
-
-        # Устанавливаем модель данных для таблицы CSV
         self.csv_table.setModel(self.csv_model)
         
-    def fillGaussTable(self):
+    def fill_gauss_table(self):  # Было: fillGaussTable
         """
-        Заполнение таблицы данными.
-
-        Использует данные из объекта viewer, чтобы заполнить таблицу csv.
+        Заполнение таблицы данными о гауссовых кривых.
+        Используется для обновления представления таблицы гауссовых кривых.
         """
-        # Создаем модель данных на основе данных CSV
         self.gaussian_model = PandasModel(self.gaussian_data)
-
-        # Устанавливаем модель данных для таблицы CSV
         self.gaussian_table.setModel(self.gaussian_model)
 
-    def fillComboBoxes(self, comboBoxX, comboBoxY):
-        """
-        Заполнение комбобоксов данными.
-
-        Использует столбцы данных из объекта viewer, чтобы заполнить комбобоксы.
-
-        Параметры:
-        -----------
-        comboBoxX : QComboBox
-            Комбобокс для выбора столбца X.
-        comboBoxY : QComboBox
-            Комбобокс для выбора столбца Y.
-        """
-        # Очищаем комбобоксы
-        comboBoxX.clear()
-        comboBoxY.clear()
-
-        # Заполняем комбобоксы именами столбцов из данных CSV
-        comboBoxX.addItems(self.viewer.df.columns)
-        comboBoxY.addItems(self.viewer.df.columns)
+    def fill_combo_boxes(self, combo_box_x, combo_box_y):  # Изменено
+        combo_box_x.clear()  # Изменено
+        combo_box_y.clear()  # Изменено
+        combo_box_x.addItems(self.viewer.df.columns)  # Изменено
+        combo_box_y.addItems(self.viewer.df.columns)  # Изменено
 
     def get_column_data(self, column_name):
         column_data = self.viewer.df[column_name]
@@ -114,7 +91,11 @@ class TableManager:
             self.gaussian_data.at[i, 'Width'] = a2
             self.gaussian_data.at[i, 'Type'] = peak_type
 
-    def computePeaks(self, x_column, y_column):
+    def compute_peaks(self, x_column, y_column):  # Было: computePeaks
+        """
+        Вычисление и обновление данных о пиках.
+        Используется для анализа данных и их визуализации.
+        """
         init_params = self.init_params()
         x_values = self.get_column_data(x_column)
         y_values = self.get_column_data(y_column)
@@ -124,70 +105,57 @@ class TableManager:
 
         self.update_gaussian_data(best_params, best_combination)
         self.add_reaction_cummulative_func(best_params, best_combination, x_values, y_column, cummulative_func)
-
-        # Обновление модели данных
-        self.fillGaussTable()        
-        self.fillMainTable()
+        self.fill_gauss_table() # Было: fillGaussTable
+        self.fill_main_table() # Было: fillMainTable
     
-    def addDiff(self, x_column, y_column, comboBoxX, comboBoxY):
-        """Добавление дифференцирования."""
+    def add_diff(self, x_column, y_column, combo_box_x, combo_box_y):  # Изменено
         dy_dx = self.math_operations.compute_derivative(self.viewer.df[x_column], self.viewer.df[y_column])
         new_column_name = y_column + '_diff'
         self.viewer.df[new_column_name] = dy_dx
-        self.fillMainTable()
-        self.fillComboBoxes(comboBoxX, comboBoxY)
-        comboBoxY.setCurrentText(new_column_name) # Также нужно передать ссылку на uiInitializer
+        self.fill_main_table()
+        self.fill_combo_boxes(combo_box_x, combo_box_y)  # Изменено
+        combo_box_y.setCurrentText(new_column_name)  # Изменено
     
-    def add_gaussian_to_table(self, height, center, width):
+    def add_gaussian_to_table(self, height, center, width):  # Было: add_gaussian_to_table
+        """        
+        Используется для обновления данных о кривых и их визуализации.
         """
-        Добавление гауссовской функции в таблицу.
-
-        Создает новую строку данных о гауссовой кривой и добавляет ее в таблицу.
-
-        Параметры:
-        -----------
-        height : float
-            Высота гауссовой кривой.
-        center : float
-            Центр гауссовой кривой.
-        width : float
-            Ширина гауссовой кривой.
-        """
-        # Создаем новую строку данных
         row_data = pd.DataFrame({'Reaction': [f'Reaction_{self.gaussian_data.shape[0] + 1}'], 
                                  'Height': [height],
                                  'Center': [center],
                                  'Width': [width],
                                  'Type':['gauss']
                                  })
-        
-        # Добавляем новую строку в данные
         self.gaussian_data = pd.concat([self.gaussian_data, row_data], ignore_index=True)
-
-        # Обновляем модель данных
         self.gaussian_model = PandasModel(self.gaussian_data)
         self.gaussian_table.setModel(self.gaussian_model)
 
-    def deleteRow(self, row_number):
-        """Удаление строки из активного DataFrame."""
-        if self.stacked_widget.currentIndex() == 0:  # Если активна таблица CSV
+    def delete_row(self, row_number):  # Было: deleteRow
+        """
+        Удаление строки из активного DataFrame.
+        Используется для управления данными в активной таблице.
+        """
+        if self.stacked_widget.currentIndex() == 0:
             self.viewer.df = self.viewer.df.drop(self.viewer.df.index[row_number])
             self.csv_model = PandasModel(self.viewer.df)
             self.csv_table.setModel(self.csv_model)
-        elif self.stacked_widget.currentIndex() == 1:  # Если активна таблица Gaus
+        elif self.stacked_widget.currentIndex() == 1:
             self.gaussian_data = self.gaussian_data.drop(self.gaussian_data.index[row_number])
             self.gaussian_model = PandasModel(self.gaussian_data)
             self.gaussian_table.setModel(self.gaussian_model)
 
-    def deleteColumn(self, column_number):
-        """Удаление столбца из активного DataFrame."""
+    def delete_column(self, column_number):  # Было: deleteColumn
+        """
+        Удаление столбца из активного DataFrame.
+        Используется для управления структурой данных в активной таблице.
+        """
         column_name = None
-        if self.stacked_widget.currentIndex() == 0:  # Если активна таблица CSV
+        if self.stacked_widget.currentIndex() == 0:
             column_name = self.viewer.df.columns[column_number]
             self.viewer.df = self.viewer.df.drop(columns=[column_name])
             self.csv_model = PandasModel(self.viewer.df)
             self.csv_table.setModel(self.csv_model)
-        elif self.stacked_widget.currentIndex() == 1:  # Если активна таблица Gaus
+        elif self.stacked_widget.currentIndex() == 1:
             column_name = self.gaussian_data.columns[column_number]
             self.gaussian_data = self.gaussian_data.drop(columns=[column_name])
             self.gaussian_model = PandasModel(self.gaussian_data)

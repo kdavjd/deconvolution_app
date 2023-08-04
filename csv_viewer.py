@@ -3,39 +3,38 @@ import os
 import pandas as pd
 import chardet
 
-class CSVViewer(): # Класс отвечает за обработку CSV файлов.
+class CSVViewer: # Класс отвечает за обработку CSV файлов.
     def __init__(self):
         self.df = pd.DataFrame() # Создаем пустой DataFrame для хранения данных.
 
-    def initialize(self, tableManager, uiInitializer):
-        # Устанавливаем ссылки на tableManager и uiInitializer
-        self.tableManager = tableManager
-        self.uiInitializer = uiInitializer
+    def initialize(self, table_manager, ui_initializer): # Было: tableManager, uiInitializer
+        # Устанавливаем ссылки на table_manager и ui_initializer
+        self.table_manager = table_manager # Было: tableManager
+        self.ui_initializer = ui_initializer # Было: uiInitializer
 
-    def getCSV(self):
+    def get_csv(self): # Было: getCSV
         # Эта функция загружает CSV файл, выбранный пользователем в главном окне приложения.        
-        self.fileName, _ = QFileDialog.getOpenFileName(None, 'Open CSV', os.getenv('HOME'), 'CSV(*.csv)')
-        if self.fileName:
-            self.loadCSV()
-            self.tableManager.fillComboBoxes(self.uiInitializer.comboBoxX, self.uiInitializer.comboBoxY)
-            self.tableManager.fillMainTable()
+        self.file_name, _ = QFileDialog.getOpenFileName(None, 'Open CSV', os.getenv('HOME'), 'CSV(*.csv)') # Было: fileName
+        if self.file_name: # Было: fileName
+            self.load_csv() # Было: loadCSV
+            self.table_manager.fill_combo_boxes(self.ui_initializer.combo_box_x, self.ui_initializer.combo_box_y) # Было: fillComboBoxes, comboBoxX, comboBoxY
+            self.table_manager.fill_main_table() # Было: fillMainTable
 
-    def loadCSV(self):
+    def load_csv(self): # Было: loadCSV
         # Эта функция считывает данные из CSV файла и сохраняет их в DataFrame.
         # Определение кодировки файла
-        with open(self.fileName, 'rb') as f:
+        with open(self.file_name, 'rb') as f: # Было: fileName
             result = chardet.detect(f.read())
         file_encoding = result['encoding']
 
         # Считывание данных из CSV файла
         self.df = pd.read_csv(
-            self.fileName,
+            self.file_name, # Было: fileName
             encoding=file_encoding,
         )
         
-    def exportCSV(self):
+    def export_csv(self): # Было: exportCSV
         # Эта функция экспортирует текущий DataFrame в файл CSV.
-        self.fileName, _ = QFileDialog.getSaveFileName(None, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)')
-        if self.fileName:
-            self.df.to_csv(self.fileName, index=False, encoding='utf-8')
-   
+        self.file_name, _ = QFileDialog.getSaveFileName(None, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)') # Было: fileName
+        if self.file_name: # Было: fileName
+            self.df.to_csv(self.file_name, index=False, encoding='utf-8') #

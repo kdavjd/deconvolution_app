@@ -12,48 +12,48 @@ class UIInitializer(QWidget):
         self.setMinimumSize(QSize(1080, 920))  
 
         # Создание кнопок и выпадающих списков
-        self.buttonLoadCSV = QPushButton('Load CSV', self)
-        self.buttonLoadCSV.clicked.connect(viewer.getCSV) 
+        self.button_load_csv = QPushButton('Load CSV', self)  # Было: buttonLoadCSV
+        self.button_load_csv.clicked.connect(viewer.get_csv)  # Было: getCSV
 
-        self.buttonExportCSV = QPushButton('Export CSV', self)
-        self.buttonExportCSV.clicked.connect(viewer.exportCSV)         
+        self.button_export_csv = QPushButton('Export CSV', self)  # Было: buttonExportCSV
+        self.button_export_csv.clicked.connect(viewer.export_csv)  # Было: exportCSV      
 
-        self.buttonComputePeaks = QPushButton('Compute peaks', self)
-        self.buttonComputePeaks.clicked.connect(parent.computePeaks)  
+        self.button_compute_peaks = QPushButton('Compute peaks', self)  # Было: buttonComputePeaks
+        self.button_compute_peaks.clicked.connect(parent.compute_peaks)  # Было: computePeaks
 
-        self.comboBoxX = QComboBox()
-        self.comboBoxX.addItem("Select X") # Placeholder for X selection        
+        self.combo_box_x = QComboBox()  # Было: comboBoxX
+        self.combo_box_x.addItem("Select X") # Placeholder for X selection        
 
-        self.comboBoxY = QComboBox()
-        self.comboBoxY.addItem("Select Y") # Placeholder for Y selection
+        self.combo_box_y = QComboBox()  # Было: comboBoxY
+        self.combo_box_y.addItem("Select Y") # Placeholder for Y selection
         
-        # Связывание изменений в выпадающих списках с функцией plotGraph
-        self.comboBoxX.currentIndexChanged.connect(parent.plotGraph)
-        self.comboBoxY.currentIndexChanged.connect(parent.plotGraph)
+        # Связывание изменений в выпадающих списках с функцией plot_graph
+        self.combo_box_x.currentIndexChanged.connect(parent.plot_graph)  # Было: plotGraph
+        self.combo_box_y.currentIndexChanged.connect(parent.plot_graph)  # Было: plotGraph
 
-        self.buttonInteractive = QPushButton('Interactive Mode', self)
-        self.buttonInteractive.setCheckable(True)
-        self.buttonInteractive.clicked.connect(parent.switchToInteractiveMode)
+        self.button_interactive = QPushButton('Interactive Mode', self)  # Было: buttonInteractive
+        self.button_interactive.setCheckable(True)
+        self.button_interactive.clicked.connect(parent.switch_to_interactive_mode)  # Было: switchToInteractiveMode
 
-        self.buttonAddDiff = QPushButton('Add Diff', self)
-        self.buttonAddDiff.clicked.connect(parent.addDiff)
+        self.button_add_diff = QPushButton('Add Diff', self)  # Было: buttonAddDiff
+        self.button_add_diff.clicked.connect(parent.add_diff)  # Было: addDiff
 
         # Создание блока с кнопками и выпадающими списками
         buttons_layout = QVBoxLayout()
-        buttons_layout.addWidget(self.buttonLoadCSV)
-        buttons_layout.addWidget(self.buttonExportCSV)        
-        buttons_layout.addWidget(self.buttonComputePeaks)
-        buttons_layout.addWidget(self.buttonInteractive)
-        buttons_layout.addWidget(self.buttonAddDiff)
-        buttons_layout.addWidget(self.comboBoxX)
-        buttons_layout.addWidget(self.comboBoxY)
+        buttons_layout.addWidget(self.button_load_csv)
+        buttons_layout.addWidget(self.button_export_csv)        
+        buttons_layout.addWidget(self.button_compute_peaks)
+        buttons_layout.addWidget(self.button_interactive)
+        buttons_layout.addWidget(self.button_add_diff)
+        buttons_layout.addWidget(self.combo_box_x)
+        buttons_layout.addWidget(self.combo_box_y)
 
         buttons_widget = QWidget()
         buttons_widget.setLayout(buttons_layout)
 
         # Создание блока с таблицей
         table_layout = QVBoxLayout()
-        table_layout.addWidget(parent.tableManager.stacked_widget)
+        table_layout.addWidget(parent.table_manager.stacked_widget)  # Было: tableManager
         table_widget = QWidget()
         table_widget.setLayout(table_layout)
 
@@ -67,18 +67,18 @@ class UIInitializer(QWidget):
         graph_widget.setLayout(graph_layout)
 
         # Создание вертикального разделителя с блоками
-        splitterVertical = QSplitter(Qt.Vertical)
-        splitterVertical.addWidget(table_widget)
-        splitterVertical.addWidget(graph_widget)
+        splitter_vertical = QSplitter(Qt.Vertical)  # Было: splitterVertical
+        splitter_vertical.addWidget(table_widget)
+        splitter_vertical.addWidget(graph_widget)
 
         # Создание горизонтального разделителя с блоками
-        splitterHorizontal = QSplitter(Qt.Horizontal)
-        splitterHorizontal.addWidget(buttons_widget)
-        splitterHorizontal.addWidget(splitterVertical)
+        splitter_horizontal = QSplitter(Qt.Horizontal)  # Было: splitterHorizontal
+        splitter_horizontal.addWidget(buttons_widget)
+        splitter_horizontal.addWidget(splitter_vertical)
 
         # Добавление разделителей на главный layout
         main_layout = QVBoxLayout()
-        main_layout.addWidget(splitterHorizontal)
+        main_layout.addWidget(splitter_horizontal)
 
         # Установка главного layout
         self.setLayout(main_layout)
