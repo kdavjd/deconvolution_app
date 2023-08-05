@@ -1,14 +1,14 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import Qt
-from csv_viewer import CSVViewer
-from pandas_model import PandasModel
-from table_manager import TableManager
+from src.csv_viewer import CSVViewer
+from src.pandas_model import PandasModel
+from src.table_manager import TableManager
 import numpy as np
 import pandas as pd
-from math_operations import MathOperations
-from ui import UIInitializer
-from event_handler import EventHandler
+from src.math_operations import MathOperations
+from src.ui import UIInitializer
+from src.event_handler import EventHandler
 
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
