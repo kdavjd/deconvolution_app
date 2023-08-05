@@ -26,66 +26,32 @@ class MainApp(QWidget):
         # Создаем экземпляры без аргументов
         self.viewer = CSVViewer()
         self.math_operations = MathOperations()
-
+        
         # Создаем другие объекты, передавая в них ссылку на viewer
-        self.table_manager = TableManager(self.viewer, self.math_operations) # Было: tableManager
-        self.ui_initializer = UIInitializer(self, self.viewer) # Было: uiInitializer
+        self.table_manager = TableManager(self.viewer, self.math_operations)
+        self.ui_initializer = UIInitializer(self, self.viewer)
 
         # Инициализируем CSVViewer, передав в него ссылки на table_manager и ui_initializer
-        self.viewer.initialize(self.table_manager, self.ui_initializer) # Было: tableManager, uiInitializer
-
-        self.event_handler = EventHandler(self) # Было: eventHandler
-
-        self.table_manager.gaussian_model.data_changed_signal.connect(self.rebuild_gaussians) # Было: dataChangedSignal, rebuildGaussians
-        self.event_handler.connect_signals() # Было: connectSignals
-
-    def switch_to_interactive_mode(self, activated): # Было: switchToInteractiveMode
-        """Переключение на интерактивный режим."""
+        self.viewer.initialize(self.table_manager, self.ui_initializer) 
+        
+        self.event_handler = EventHandler(self)
+        self.table_manager.gaussian_model.data_changed_signal.connect(self.event_handler.rebuild_gaussians) 
+        self.event_handler.connect_signals() 
+        
+    def switch_to_interactive_mode(self, activated):        
         if activated:
-            self.event_handler.connect_canvas_events() # Было: connectCanvasEvents
+            self.event_handler.connect_canvas_events()
         else:
-            self.event_handler.disconnect_canvas_events() # Было: disconnectCanvasEvents
+            self.event_handler.disconnect_canvas_events()
 
-    def rebuild_gaussians(self): # Было: rebuildGaussians
-        """Перестроение всех гауссиан по данным в таблице."""
-        self.plot_graph()  # очистим график # Было: plotGraph
-        ax = self.ui_initializer.figure.get_axes()[0] # Было: uiInitializer
-        for _, row in self.table_manager.gaussian_data.iterrows(): # Было: tableManager
-            x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) # Было: tableManager, uiInitializer, comboBoxX
-            x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-            if row['Type'] == 'gauss':
-                y = self.math_operations.gaussian(x, row['Height'], row['Center'], row['Width'])
-            else:
-                y = self.math_operations.fraser_suzuki(x, row['Height'], row['Center'], row['Width'], -1)
-            ax.plot(x, y, 'r-')
+    def compute_peaks(self):        
+        self.event_handler.compute_peaks_button_pushed()    
 
-        self.ui_initializer.canvas.draw() # Было: uiInitializer
-
-    def compute_peaks(self): # Было: computePeaks
-        x_column = self.ui_initializer.combo_box_x.currentText() # Было: uiInitializer, comboBoxX
-        y_column = self.ui_initializer.combo_box_y.currentText() # Было: uiInitializer, comboBoxY
-        self.table_manager.compute_peaks(x_column, y_column) # Было: tableManager, computePeaks
-        self.rebuild_gaussians() # Было: rebuildGaussians
-
-    def plot_graph(self): # Было: plotGraph
-        """Построение графика."""
-        x_column = self.ui_initializer.combo_box_x.currentText() # Было: uiInitializer, comboBoxX
-        y_column = self.ui_initializer.combo_box_y.currentText() # Было: uiInitializer, comboBoxY
-
-        if not x_column or not y_column:  # Если одно из значений пустое, прекратить функцию
-            return
-
-        self.ui_initializer.figure.clear() # Было: uiInitializer
-
-        ax = self.ui_initializer.figure.add_subplot(111) # Было: uiInitializer
-        ax.plot(self.viewer.df[x_column], self.viewer.df[y_column], 'b-')
-
-        self.ui_initializer.canvas.draw() # Было: uiInitializer
-
-    def add_diff(self): # Было: addDiff
-        x_column = self.ui_initializer.combo_box_x.currentText() # Было: uiInitializer, comboBoxX
-        y_column = self.ui_initializer.combo_box_y.currentText() # Было: uiInitializer, comboBoxY
-        self.table_manager.add_diff(x_column, y_column, self.ui_initializer.combo_box_x, self.ui_initializer.combo_box_y) # Было: tableManager, addDiff, uiInitializer, comboBoxX, comboBoxY
+    def add_diff(self):        
+        self.event_handler.add_diff_button_pushed()
+        
+    def plot_graph(self):
+        self.event_handler.plot_graph()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

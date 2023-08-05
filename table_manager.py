@@ -75,47 +75,6 @@ class TableManager:
         new_column_name = y_column + '_cummulative'
         self.viewer.df[new_column_name] = cummulative_func
     
-    def init_params(self):
-        init_params = []
-        for _, row in self.gaussian_data.iterrows():
-            init_params.extend([row['Height'], row['Center'], row['Width']])
-        return init_params
-
-    def update_gaussian_data(self, best_params, best_combination):
-        for i, peak_type in enumerate(best_combination):
-            a0 = best_params[3*i]
-            a1 = best_params[3*i+1]
-            a2 = best_params[3*i+2]
-            self.gaussian_data.at[i, 'Height'] = a0
-            self.gaussian_data.at[i, 'Center'] = a1
-            self.gaussian_data.at[i, 'Width'] = a2
-            self.gaussian_data.at[i, 'Type'] = peak_type
-
-    def compute_peaks(self, x_column, y_column):  # Было: computePeaks
-        """
-        Вычисление и обновление данных о пиках.
-        Используется для анализа данных и их визуализации.
-        """
-        init_params = self.init_params()
-        x_values = self.get_column_data(x_column)
-        y_values = self.get_column_data(y_column)
-
-        best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(x_values, y_values, init_params)
-        cummulative_func = np.zeros(len(x_values))
-
-        self.update_gaussian_data(best_params, best_combination)
-        self.add_reaction_cummulative_func(best_params, best_combination, x_values, y_column, cummulative_func)
-        self.fill_gauss_table() # Было: fillGaussTable
-        self.fill_main_table() # Было: fillMainTable
-    
-    def add_diff(self, x_column, y_column, combo_box_x, combo_box_y):  # Изменено
-        dy_dx = self.math_operations.compute_derivative(self.viewer.df[x_column], self.viewer.df[y_column])
-        new_column_name = y_column + '_diff'
-        self.viewer.df[new_column_name] = dy_dx
-        self.fill_main_table()
-        self.fill_combo_boxes(combo_box_x, combo_box_y)  # Изменено
-        combo_box_y.setCurrentText(new_column_name)  # Изменено
-    
     def add_gaussian_to_table(self, height, center, width):  # Было: add_gaussian_to_table
         """        
         Используется для обновления данных о кривых и их визуализации.
