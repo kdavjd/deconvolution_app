@@ -13,7 +13,7 @@ class UIInitializer(QWidget):
 
         # Создание кнопок и выпадающих списков
         self.button_load_csv = QPushButton('Load CSV', self)  # Было: buttonLoadCSV
-        self.button_load_csv.clicked.connect(viewer.get_csv)  # Было: getCSV
+        self.button_load_csv.clicked.connect(parent.load_csv_table)  # Было: getCSV
 
         self.button_export_csv = QPushButton('Export CSV', self)  # Было: buttonExportCSV
         self.button_export_csv.clicked.connect(viewer.export_csv)  # Было: exportCSV      
@@ -38,10 +38,14 @@ class UIInitializer(QWidget):
         self.button_add_diff = QPushButton('Add Diff', self)  # Было: buttonAddDiff
         self.button_add_diff.clicked.connect(parent.add_diff)  # Было: addDiff
 
+        self.button_options_mode = QPushButton('Options Mode', self)  # Новая кнопка
+        self.button_options_mode.clicked.connect(parent.options_mode)
+        
         # Создание блока с кнопками и выпадающими списками
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(self.button_load_csv)
-        buttons_layout.addWidget(self.button_export_csv)        
+        buttons_layout.addWidget(self.button_export_csv)
+        buttons_layout.addWidget(self.button_options_mode)     
         buttons_layout.addWidget(self.button_compute_peaks)
         buttons_layout.addWidget(self.button_interactive)
         buttons_layout.addWidget(self.button_add_diff)

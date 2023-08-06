@@ -1,12 +1,11 @@
-from PyQt5.QtWidgets import QTableView, QComboBox, QStackedWidget
+from PyQt5.QtWidgets import QTableView, QStackedWidget
 import pandas as pd
-import numpy as np
-from pandas_model import PandasModel
+from src.pandas_model import PandasModel
 
 class TableManager:
     """Класс для управления функциональностью таблиц."""
 
-    def __init__(self, viewer, math_operations):
+    def __init__(self, viewer, math_operations, table_names, table_dict):
         """
         Инициализация класса.
 
@@ -16,33 +15,127 @@ class TableManager:
             Объект CSVViewer для управления CSV данными.
         math_operations: объект MathOperations
             Объект для выполнения математических операций.
+        table_names: list of str
+            Список названий таблиц.
         """
         self.viewer = viewer
-        self.math_operations = math_operations
-        self.gaussian_data = pd.DataFrame(columns=['Reaction', 'Height', 'Center', 'Width'])
-        self.gaussian_model = PandasModel(self.gaussian_data)
-        self.gaussian_table = QTableView()
-        self.gaussian_table.setModel(self.gaussian_model)
-        self.csv_table = QTableView()
+        self.math_operations = math_operations          
+        self.table_names = table_names
+        print(f"Inside TableManager init, table names: {self.table_names}")    
+        self.data = {}
+        self.models = {}
+        self.tables = {}
         self.stacked_widget = QStackedWidget()
-        self.stacked_widget.addWidget(self.csv_table)
-        self.stacked_widget.addWidget(self.gaussian_table)
-
-    def fill_main_table(self):  # Было: fillMainTable
-        """
-        Заполнение основной таблицы данными из объекта viewer.
-        Используется для обновления представления основной таблицы.
-        """
-        self.csv_model = PandasModel(self.viewer.df)
-        self.csv_table.setModel(self.csv_model)
+        # Словарь для соответствия имени таблицы и её индекса в stacked_widget
+        self.table_indexes = {}
         
-    def fill_gauss_table(self):  # Было: fillGaussTable
+        for name in table_names:
+            self.data[name] = table_dict[name]
+            self.models[name] = PandasModel(self.data[name])
+            self.tables[name] = QTableView()
+            self.tables[name].setModel(self.models[name])
+            self.stacked_widget.addWidget(self.tables[name])
+            # Сохранение индекса таблицы в словаре
+            self.table_indexes[name] = self.stacked_widget.count() - 1  
+        
+        print(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
+    
+    def update_table_data(self, table_name, data):
         """
-        Заполнение таблицы данными о гауссовых кривых.
-        Используется для обновления представления таблицы гауссовых кривых.
+        Обновление данных в таблице.
+
+        Параметры:
+        -----------
+        table_name: str
+            Название таблицы для обновления.
+        data: pandas DataFrame
+            Новые данные для таблицы.
         """
-        self.gaussian_model = PandasModel(self.gaussian_data)
-        self.gaussian_table.setModel(self.gaussian_model)
+        if table_name not in self.table_names:
+            self.table_names.append(table_name)
+            self.table_indexes[table_name] = self.stacked_widget.count()
+            self.tables[table_name] = QTableView()
+            self.stacked_widget.addWidget(self.tables[table_name])
+        
+        self.data[table_name] = data
+        self.models[table_name] = PandasModel(self.data[table_name])
+        self.tables[table_name].setModel(self.models[table_name])
+    
+    def fill_table(self, table_name): 
+        """
+        Заполнение таблицы данными.
+        Используется для обновления представления таблиц.
+
+        Параметры:
+        -----------
+        table_name: str
+            Название таблицы для заполнения.
+        """
+        
+        if table_name not in self.table_names:                      
+            raise ValueError(f"Unknown table name: {table_name}")        
+           
+        self.models[table_name] = PandasModel(self.data[table_name])        
+        self.tables[table_name].setModel(self.models[table_name])
+        self.tables[table_name].reset()
+        
+        index = self.table_indexes[table_name]
+        self.stacked_widget.setCurrentIndex(index)
+        self.tables[table_name].update()     
+
+    def add_row_to_table(self, table_name, row_data): 
+        """        
+        Используется для добавления строки данных в таблицу.
+
+        Параметры:
+        -----------
+        table_name: str
+            Название таблицы для добавления строки.
+        row_data: pandas DataFrame
+            Данные строки.
+        """
+        if table_name not in self.table_names:
+            raise ValueError(f"Unknown table name: {table_name}")
+
+        self.data[table_name] = pd.concat([self.data[table_name], row_data], ignore_index=True)
+        self.fill_table(table_name)
+
+    def delete_row(self, table_name, row_number):
+        """
+        Удаление строки из таблицы.
+        Используется для управления данными в таблице.
+
+        Параметры:
+        -----------
+        table_name: str
+            Название таблицы для удаления строки.
+        row_number: int
+            Номер строки для удаления.
+        """
+        if table_name not in self.table_names:
+            raise ValueError(f"Unknown table name: {table_name}")
+        
+        self.data[table_name] = self.data[table_name].drop(self.data[table_name].index[row_number])
+        self.fill_table(table_name)
+
+    def delete_column(self, table_name, column_number):
+        """
+        Удаление столбца из таблицы.
+        Используется для управления структурой данных в таблице.
+
+        Параметры:
+        -----------
+        table_name: str
+            Название таблицы для удаления столбца.
+        column_number: int
+            Номер столбца для удаления.
+        """
+        if table_name not in self.table_names:
+            raise ValueError(f"Unknown table name: {table_name}")
+        
+        column_name = self.data[table_name].columns[column_number]
+        self.data[table_name] = self.data[table_name].drop(columns=[column_name])
+        self.fill_table(table_name)
 
     def fill_combo_boxes(self, combo_box_x, combo_box_y):  # Изменено
         combo_box_x.clear()  # Изменено
@@ -86,8 +179,8 @@ class TableManager:
                                  'Type':['gauss']
                                  })
         self.gaussian_data = pd.concat([self.gaussian_data, row_data], ignore_index=True)
-        self.gaussian_model = PandasModel(self.gaussian_data)
-        self.gaussian_table.setModel(self.gaussian_model)
+        self.models['gauss'] = PandasModel(self.gaussian_data)
+        self.tables['gauss'].setModel(self.gaussian_model)
 
     def delete_row(self, row_number):  # Было: deleteRow
         """

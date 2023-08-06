@@ -62,7 +62,7 @@ class PandasModel(QAbstractTableModel):
             return self._data.columns[col]
         return None
 
-    def set_data(self, index, value, role=Qt.EditRole):  # Было: setData
+    def set_data(self, index, value, role=Qt.EditRole):
         """
         Позволяет изменить данные в DataFrame.
 

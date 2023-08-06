@@ -9,7 +9,7 @@ class EventHandler:
         self.ui_initializer = main_app.ui_initializer
         self.table_manager = main_app.table_manager
         self.math_operations = main_app.math_operations 
-
+   
     def add_diff_button_pushed(self):
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
@@ -21,7 +21,7 @@ class EventHandler:
         new_column_name = y_column_name + '_diff'
         self.viewer.df[new_column_name] = dy_dx
 
-        self.table_manager.fill_main_table()
+        self.table_manager.fill_table(self.viewer.file_name)
 
         self.table_manager.fill_combo_boxes(
             self.ui_initializer.combo_box_x,
@@ -84,12 +84,14 @@ class EventHandler:
         self.rebuild_gaussians()
         
     def connect_signals(self):  
-        self.table_manager.gaussian_table.clicked.connect(self.handle_table_clicked)
-        self.table_manager.csv_table.clicked.connect(self.handle_table_clicked)
+        self.table_manager.tables['gauss'].clicked.connect(self.handle_table_clicked)
+        if self.viewer.file_name:
+            self.table_manager.tables[self.viewer.file_name].clicked.connect(self.handle_table_clicked)
 
     def handle_table_clicked(self, q_model_index):
         if QApplication.keyboardModifiers() == Qt.ControlModifier:
             self.table_manager.delete_row(q_model_index.row())
+            self.rebuild_gaussians()
         elif QApplication.keyboardModifiers() == Qt.AltModifier:
             self.table_manager.delete_column(q_model_index.column())
         
