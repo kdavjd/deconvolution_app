@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QLineEdit, QInputDialog, QTableWidgetItem
 from PyQt5.QtCore import Qt
 import numpy as np
 import logging
@@ -34,11 +34,12 @@ class EventHandler:
         self.ui_initializer.combo_box_y.setCurrentText(new_column_name)
 
     def get_init_params(self):
-        logger.info("Начало метода get_init_params.")
+        logger.info("Начало метода get_init_params.")        
         init_params = []
         for index, row in self.table_manager.data['gauss'].iterrows():
             logger.debug(f"Обработка строки {index}: height={row['height']}, center={row['center']}, width={row['width']}")
             init_params.extend([row['height'], row['center'], row['width']])
+        logger.debug(f"Длина начальных параметров: {len(init_params)}")
         logger.info(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
         return init_params
 
@@ -85,8 +86,10 @@ class EventHandler:
         x_values = self.table_manager.get_column_data(x_column_name)
         y_values = self.table_manager.get_column_data(y_column_name)
 
+        maxfev = int(self.table_manager.data['options']['maxfev'].values)
+        coeff_1 = float(self.table_manager.data['options']['coeff_1'].values)
         best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-            x_values, y_values, init_params, int(self.table_manager.data['options']['maxfev']))
+            x_values, y_values, init_params, maxfev, coeff_1)
         
         cummulative_func = np.zeros(len(x_values))
 
@@ -102,15 +105,28 @@ class EventHandler:
         
     def connect_signals(self):  
         self.table_manager.tables['gauss'].clicked.connect(self.handle_table_clicked)
+        self.table_manager.tables['options'].clicked.connect(self.handle_table_clicked)
         if self.viewer.file_name:
             self.table_manager.tables[self.viewer.file_name].clicked.connect(self.handle_table_clicked)
 
     def handle_table_clicked(self, q_model_index):
+        table = self.table_manager.tables[self.table_manager.current_table_name]
+        model = table.model()
+
         if QApplication.keyboardModifiers() == Qt.ControlModifier:
             self.table_manager.delete_row(q_model_index.row())
             self.rebuild_gaussians()
         elif QApplication.keyboardModifiers() == Qt.AltModifier:
             self.table_manager.delete_column(q_model_index.column())
+        else:
+            # Получаем текущее значение из модели
+            current_value = model.data(q_model_index, Qt.DisplayRole)
+
+            # Здесь можно выполнить необходимые действия для изменения значения, например, показать диалоговое окно для ввода нового значения.
+            new_value, ok = QInputDialog.getText(None, "Изменить значение", "Введите новое значение:", QLineEdit.Normal, current_value)
+            if ok and new_value != current_value:
+                # Устанавливаем новое значение в модели
+                model.set_data(q_model_index, new_value, Qt.EditRole)
         
     def on_release(self, event):
         """Обработка отпускания кнопки мыши."""
