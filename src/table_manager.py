@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QTableView, QStackedWidget
 from PyQt5.QtCore import Qt
 import pandas as pd
 from src.pandas_model import PandasModel
+import logging
+
 
 class TableManager:
     """Класс для управления функциональностью таблиц."""
@@ -21,8 +23,7 @@ class TableManager:
         """
         self.viewer = viewer
         self.math_operations = math_operations          
-        self.table_names = table_names
-        print(f"Inside TableManager init, table names: {self.table_names}")    
+        self.table_names = table_names           
         self.data = {}
         self.models = {}
         self.tables = {}
@@ -41,7 +42,7 @@ class TableManager:
             # Сохранение индекса таблицы в словаре
             self.table_indexes[name] = self.stacked_widget.count() - 1  
         
-        print(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
+        #print(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
     
     def update_table_data(self, table_name, data):
         """
@@ -176,7 +177,7 @@ class TableManager:
         new_column_name = y_column + '_cummulative'
         self.data[self.viewer.file_name][new_column_name] = cummulative_func
     
-    def add_gaussian_to_table(self, height, center, width):  # Было: add_gaussian_to_table
+    def add_gaussian_to_table(self, height, center, width):
         """        
         Используется для обновления данных о кривых и их визуализации.
         """
@@ -185,7 +186,8 @@ class TableManager:
                                  'height': [height],
                                  'center': [center],
                                  'width': [width],
-                                 'type':['gauss']
+                                 'type':['gauss'],
+                                 'coeff_1': [float(self.data['options']['coeff_1'].values)]
                                  })
         self.data['gauss'] = pd.concat([self.gaus, row_data], ignore_index=True)
         self.models['gauss'] = PandasModel(self.gaus)

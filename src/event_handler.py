@@ -1,6 +1,10 @@
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 import numpy as np
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class EventHandler:
     def __init__(self, main_app):
@@ -30,37 +34,49 @@ class EventHandler:
         self.ui_initializer.combo_box_y.setCurrentText(new_column_name)
 
     def get_init_params(self):
+        logger.info("Начало метода get_init_params.")
         init_params = []
-        for _, row in self.table_manager.data['gauss'].iterrows():
+        for index, row in self.table_manager.data['gauss'].iterrows():
+            logger.debug(f"Обработка строки {index}: height={row['height']}, center={row['center']}, width={row['width']}")
             init_params.extend([row['height'], row['center'], row['width']])
+        logger.info(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
         return init_params
 
     def update_gaussian_data(self, best_params, best_combination):
+        #logger.info("Начало метода update_gaussian_data.")
         for i, peak_type in enumerate(best_combination):
-            a0 = best_params[3*i]
-            a1 = best_params[3*i+1]
-            a2 = best_params[3*i+2]
-            self.table_manager.data['gauss'].at[i, 'height'] = a0
-            self.table_manager.data['gauss'].at[i, 'center'] = a1
-            self.table_manager.data['gauss'].at[i, 'width'] = a2
+            height = best_params[3*i]
+            center = best_params[3*i+1]
+            width = best_params[3*i+2]
+            
+            self.table_manager.data['gauss'].at[i, 'height'] = height
+            self.table_manager.data['gauss'].at[i, 'center'] = center
+            self.table_manager.data['gauss'].at[i, 'width'] = width
+            self.table_manager.data['gauss'].at[i, 'coeff_1'] = float(self.table_manager.data['options']['coeff_1'].values)
             self.table_manager.data['gauss'].at[i, 'type'] = peak_type
+        #logger.info("Конец метода update_gaussian_data.")
     
     def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
+        logger.info("Начало метода add_reaction_cummulative_func.")
         for i, peak_type in enumerate(best_combination):
-            a0 = best_params[3 * i]
-            a1 = best_params[3 * i + 1]
-            a2 = best_params[3 * i + 2]
-
+            height = best_params[3 * i]
+            center = best_params[3 * i + 1]
+            width = best_params[3 * i + 2]  
+            
             new_column_name = y_column + '_reaction_' + str(i)
             if peak_type == 'gauss':
-                peak_func = self.math_operations.gaussian(x_values, a0, a1, a2)
+                peak_func = self.math_operations.gaussian(x_values, height, center, width)
             else:
-                peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, -1)
+                peak_func = self.math_operations.fraser_suzuki(
+                    x_values, height, center, width, 
+                    float(self.table_manager.data['options']['coeff_1'].values))
+                
             self.viewer.df[new_column_name] = peak_func
             cummulative_func += peak_func
 
         new_column_name = y_column + '_cummulative'
         self.viewer.df[new_column_name] = cummulative_func
+        logger.info("Конец метода add_reaction_cummulative_func.")
 
     def compute_peaks_button_pushed(self):
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
@@ -70,7 +86,7 @@ class EventHandler:
         y_values = self.table_manager.get_column_data(y_column_name)
 
         best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-            x_values, y_values, init_params)
+            x_values, y_values, init_params, int(self.table_manager.data['options']['maxfev']))
         
         cummulative_func = np.zeros(len(x_values))
 
@@ -78,8 +94,10 @@ class EventHandler:
         
         self.add_reaction_cummulative_func(
             best_params, best_combination, x_values, y_column_name, cummulative_func)
-                
-        self.table_manager.fill_table('gauss')        
+        
+        self.table_manager.data['options']['rmse'] = best_rmse
+                              
+        self.table_manager.fill_table('gauss')   
         self.rebuild_gaussians()
         
     def connect_signals(self):  

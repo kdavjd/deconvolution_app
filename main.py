@@ -19,16 +19,14 @@ plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
 class MainApp(QWidget):
     """Главное приложение."""
     functions_data = pd.DataFrame(columns=['reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
-    options_data = pd.DataFrame({'maxfev': [2000], 'coeff_': [-1]})
+    options_data = pd.DataFrame({'maxfev': [2000], 'coeff_1': [-1], 'rmse':[0.0]})
     table_dict = {'gauss':functions_data,
                   'options':options_data}
     
     def __init__(self):
         """Инициализация класса."""
         super().__init__()
-
-        self.frazer_a3 = -1
-        self.maxfev = 1000
+        
         # Создаем экземпляры без аргументов
         self.viewer = CSVViewer(table_dict=self.table_dict)
         self.math_operations = MathOperations()
@@ -60,7 +58,7 @@ class MainApp(QWidget):
             self.event_handler.disconnect_canvas_events()
 
     def options_mode(self):        
-        pass
+        self.table_manager.fill_table('options')
     
     def compute_peaks(self):        
         self.event_handler.compute_peaks_button_pushed()    
@@ -71,8 +69,7 @@ class MainApp(QWidget):
     def plot_graph(self):
         self.event_handler.plot_graph()
         
-    def create_new_table():
-        
+    def create_new_table():        
         pass
 
 if __name__ == '__main__':
