@@ -49,15 +49,8 @@ class MainApp(QWidget):
         self.table_dict.update({self.viewer.file_name: self.viewer.df})
         
         # Удаление всех ключей со значением None
-        self.table_dict = {k: v for k, v in self.table_dict.items() if k is not None}
-        
-        print(f"Current table dict keys before TableManager init: {self.table_dict.keys()}")        
-        
+        self.table_dict = {k: v for k, v in self.table_dict.items() if k is not None} 
         self.table_manager.update_table_data(self.viewer.file_name, self.viewer.df)
-        
-        print(f"TableManager instance created.")
-        
-        print(self.table_dict.keys())
         self.table_manager.fill_table(self.viewer.file_name)       
     
     def switch_to_interactive_mode(self, activated):

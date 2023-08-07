@@ -31,8 +31,8 @@ class EventHandler:
 
     def get_init_params(self):
         init_params = []
-        for _, row in self.table_manager.gaussian_data.iterrows():
-            init_params.extend([row['Height'], row['Center'], row['Width']])
+        for _, row in self.table_manager.data['gauss'].iterrows():
+            init_params.extend([row['height'], row['center'], row['width']])
         return init_params
 
     def update_gaussian_data(self, best_params, best_combination):
@@ -40,10 +40,10 @@ class EventHandler:
             a0 = best_params[3*i]
             a1 = best_params[3*i+1]
             a2 = best_params[3*i+2]
-            self.table_manager.gaussian_data.at[i, 'Height'] = a0
-            self.table_manager.gaussian_data.at[i, 'Center'] = a1
-            self.table_manager.gaussian_data.at[i, 'Width'] = a2
-            self.table_manager.gaussian_data.at[i, 'Type'] = peak_type
+            self.table_manager.data['gauss'].at[i, 'height'] = a0
+            self.table_manager.data['gauss'].at[i, 'center'] = a1
+            self.table_manager.data['gauss'].at[i, 'width'] = a2
+            self.table_manager.data['gauss'].at[i, 'type'] = peak_type
     
     def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
         for i, peak_type in enumerate(best_combination):
@@ -79,8 +79,7 @@ class EventHandler:
         self.add_reaction_cummulative_func(
             best_params, best_combination, x_values, y_column_name, cummulative_func)
                 
-        self.table_manager.fill_gauss_table()
-        self.table_manager.fill_main_table()
+        self.table_manager.fill_table('gauss')        
         self.rebuild_gaussians()
         
     def connect_signals(self):  
@@ -115,27 +114,30 @@ class EventHandler:
         self.press_y = event.ydata
 
     def connect_canvas_events(self):
-        self.table_manager.stacked_widget.setCurrentIndex(1)
+        self.table_manager.fill_table('gauss')       
+        
         self.press_cid = self.ui_initializer.canvas.mpl_connect('button_press_event', self.on_press)
         self.release_cid = self.ui_initializer.canvas.mpl_connect('button_release_event', self.on_release)
 
-    def disconnect_canvas_events(self):
-        self.table_manager.stacked_widget.setCurrentIndex(0)
+    def disconnect_canvas_events(self):        
+        self.table_manager.fill_table(self.viewer.file_name)        
+        
         self.ui_initializer.canvas.mpl_disconnect(self.press_cid)
         self.ui_initializer.canvas.mpl_disconnect(self.release_cid)
+        
         self.rebuild_gaussians()
 
     def rebuild_gaussians(self):
         """Перестроение всех гауссиан по данным в таблице."""
         self.plot_graph()  
         ax = self.ui_initializer.figure.get_axes()[0] 
-        for _, row in self.table_manager.gaussian_data.iterrows(): 
+        for _, row in self.table_manager.data['gauss'].iterrows(): 
             x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-            if row['Type'] == 'gauss':
-                y = self.math_operations.gaussian(x, row['Height'], row['Center'], row['Width'])
+            if row['type'] == 'gauss':
+                y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
             else:
-                y = self.math_operations.fraser_suzuki(x, row['Height'], row['Center'], row['Width'], -1)
+                y = self.math_operations.fraser_suzuki(x, row['height'], row['center'], row['width'], -1)
             ax.plot(x, y, 'r-')
 
         self.ui_initializer.canvas.draw()

@@ -49,18 +49,13 @@ class PandasModel(QAbstractTableModel):
                 return str(self._data.iloc[index.row(), index.column()])
         return None
 
-    def header_data(self, col, orientation, role):  # Было: headerData
-        """
-        Возвращает заголовки для строк и столбцов.
-
-        :param col: индекс столбца.
-        :param orientation: ориентация заголовка (вертикальная или горизонтальная).
-        :param role: роль данных.
-        :return: заголовок столбца или None, если заголовок недействителен.
-        """
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self._data.columns[col]
-        return None
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role != Qt.DisplayRole:
+            return None
+        if orientation == Qt.Horizontal:
+            return self._data.columns[section]
+        if orientation == Qt.Vertical:
+            return self._data.index[section]
 
     def set_data(self, index, value, role=Qt.EditRole):
         """
