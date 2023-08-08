@@ -43,15 +43,14 @@ class EventHandler:
         logger.debug(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
         return init_params
 
-    def update_gaussian_data(self, best_params, best_combination, coeff_1) :
-        logger.debug("Начало метода update_gaussian_data.")        
-        
-        gaussian_data = self.table_manager.data['gauss'].copy()        
-        
+    def update_gaussian_data(self, best_params, best_combination, coeff_1):
+        logger.debug("Начало метода update_gaussian_data.")
+        gaussian_data = self.table_manager.data['gauss'].copy()
+
         for i, peak_type in enumerate(best_combination):
-            height = best_params[3*i]
-            center = best_params[3*i+1]
-            width = best_params[3*i+2]
+            height = best_params[3 * i]
+            center = best_params[3 * i + 1]
+            width = best_params[3 * i + 2]
             coeff_ = coeff_1[i]
 
             gaussian_data.at[i, 'height'] = height
@@ -59,10 +58,8 @@ class EventHandler:
             gaussian_data.at[i, 'width'] = width
             gaussian_data.at[i, 'type'] = peak_type
             gaussian_data.at[i, 'coeff_1'] = coeff_
-        
-        self.table_manager.update_table_data('gauss', gaussian_data)
 
-        logger.info(gaussian_data)
+        return gaussian_data
     
     def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
         logger.debug("Начало метода add_reaction_cummulative_func.")
@@ -101,7 +98,9 @@ class EventHandler:
         
         cummulative_func = np.zeros(len(x_values))
 
-        self.update_gaussian_data(best_params, best_combination, coeff_1)        
+               
+        best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
+        self.table_manager.update_table_data('gauss', best_gaussian_data)
         
         self.add_reaction_cummulative_func(
             best_params, best_combination, x_values, y_column_name, cummulative_func)
