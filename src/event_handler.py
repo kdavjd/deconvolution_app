@@ -145,9 +145,9 @@ class EventHandler:
         x = np.linspace(min(x_column_data), max(x_column_data), 1000)
         y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
 
-        ax = self.ui_initializer.figure.get_axes()[0]
+        ax = self.ui_initializer.figure1.get_axes()[0]
         ax.plot(x, y, 'r-')
-        self.ui_initializer.canvas.draw()
+        self.ui_initializer.canvas1.draw()
 
         self.table_manager.add_gaussian_to_table(self.press_y, self.press_x, width)
         
@@ -165,15 +165,15 @@ class EventHandler:
     def disconnect_canvas_events(self):        
         self.table_manager.fill_table(self.viewer.file_name)        
         
-        self.ui_initializer.canvas.mpl_disconnect(self.press_cid)
-        self.ui_initializer.canvas.mpl_disconnect(self.release_cid)
+        self.ui_initializer.canvas1.mpl_disconnect(self.press_cid)
+        self.ui_initializer.canvas1.mpl_disconnect(self.release_cid)
         
         self.rebuild_gaussians()
 
     def rebuild_gaussians(self):
         """Перестроение всех гауссиан по данным в таблице."""
         self.plot_graph()  
-        ax = self.ui_initializer.figure.get_axes()[0] 
+        ax = self.ui_initializer.figure1.get_axes()[0] 
         for _, row in self.table_manager.data['gauss'].iterrows(): 
             x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
@@ -185,7 +185,7 @@ class EventHandler:
                 logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
             ax.plot(x, y, 'r-')
 
-        self.ui_initializer.canvas.draw()
+        self.ui_initializer.canvas1.draw()
         
     def plot_graph(self):
         """Построение графика."""
@@ -195,9 +195,9 @@ class EventHandler:
         if not x_column or not y_column:  
             return
 
-        self.ui_initializer.figure.clear() 
+        self.ui_initializer.figure1.clear() 
 
-        ax = self.ui_initializer.figure.add_subplot(111) 
+        ax = self.ui_initializer.figure1.add_subplot(111) 
         ax.plot(self.viewer.df[x_column], self.viewer.df[y_column], 'b-')
 
-        self.ui_initializer.canvas.draw()
+        self.ui_initializer.canvas1.draw()
