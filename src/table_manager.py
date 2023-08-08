@@ -4,6 +4,8 @@ import pandas as pd
 from src.pandas_model import PandasModel
 import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class TableManager:
     """Класс для управления функциональностью таблиц."""
@@ -42,7 +44,7 @@ class TableManager:
             # Сохранение индекса таблицы в словаре
             self.table_indexes[name] = self.stacked_widget.count() - 1  
         
-        #print(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
+        logger.info(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
     
     def update_table_data(self, table_name, data):
         """

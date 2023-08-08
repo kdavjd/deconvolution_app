@@ -9,58 +9,55 @@ logger = logging.getLogger(__name__)
 class MathOperations:
 
     @staticmethod
-    def gaussian(x, a0, a1, a2):
+    def gaussian(x: np.ndarray, a0: float, a1: float, a2: float) -> np.ndarray:
         """Гауссовская функция."""
         a0, a1, a2 = max(0, float(a0)), float(a1), float(a2)
         return a0 * np.exp(-((x - a1) ** 2) / (2 * a2 ** 2))
 
-
     @staticmethod
-    def compute_derivative(x_values, y_values):
+    def compute_derivative(x_values: np.ndarray, y_values: np.ndarray) -> np.ndarray:
         dy_dx = np.gradient(y_values, x_values) * -1
         return dy_dx
 
     @staticmethod
-    def fraser_suzuki(x, a0, a1, a2, a3):
+    def fraser_suzuki(x: np.array, a0: float, a1: float, a2: float, a3: float) -> np.array:
         with np.errstate(divide='ignore', invalid='ignore'):
             result = a0 * np.exp(-np.log(2)*((np.log(1+2*a3*((x-a1)/a2))/a3)**2))
         result = np.nan_to_num(result, nan=0)
         return result
 
     @staticmethod
-    def peaks(x, peak_types, coeff_1, *params):
-        logger.debug(f"Длина params в функции peaks: {len(params)}")     
+    def peaks(x: np.array, peak_types: list, coeff_1: list, *params: float) -> np.array:
         y = np.zeros_like(x)
         for i, peak_type in enumerate(peak_types):
             a0 = params[3*i]
             a1 = params[3*i+1]
             a2 = params[3*i+2]
-            logger.debug(f"Текущий индекс: {i}, параметры: {params[3*i]}, {params[3*i+1]}, {params[3*i+2]}")                       
             if peak_type == 'gauss':
                 y = y + MathOperations.gaussian(x, a0, a1, a2)
             else: 
-                y = y + MathOperations.fraser_suzuki(x, a0, a1, a2, coeff_1) 
+                y = y + MathOperations.fraser_suzuki(x, a0, a1, a2, coeff_1[i]) 
         return y
 
     @staticmethod
-    def compute_best_peaks(x_values, y_values, initial_params, maxfev, coeff_1):
+    def compute_best_peaks(
+        x_values: np.array, y_values: np.array, num_peaks: int, initial_params: list, maxfev: int, coeff_1: list):
+        
         logger.debug("Начало вычисления лучших пиков.")
-        logger.debug(f"Полученные начальные параметры: {str(initial_params)}")     
+        logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
+        
         peak_types = ['gauss', 'fraser']
         
-        combinations = list(product(peak_types, repeat=len(initial_params)//3))
-        logger.info(f"Комбинации: {combinations}")    
+        combinations = list(product(peak_types, repeat=num_peaks))
+        logger.debug(f"Комбинации: {combinations}")
+        
         best_rmse = np.inf
         best_popt = None
         best_combination = None
 
-        lower_bounds = []
-        upper_bounds = []
-        
-        for _ in range(len(initial_params)//3):
-            lower_bounds.extend([0, 0, 0])  # Нижняя граница для первых трёх параметров из четырёх
-            upper_bounds.extend([np.inf, np.inf, np.inf]) 
-        
+        lower_bounds = [0] * num_peaks * 3
+        upper_bounds = [np.inf] * num_peaks * 3
+
         bounds = (lower_bounds, upper_bounds)
         
         for combination in combinations:
@@ -79,7 +76,7 @@ class MathOperations:
                 predicted = MathOperations.peaks(x_values, combination, coeff_1, *popt)
 
                 rmse = np.sqrt(np.mean((y_values - predicted)**2))
-                logger.info(f"Комбинация: {combination} достигла RMSE: {rmse}")
+                logger.debug(f"Комбинация: {combination} достигла RMSE: {rmse}")
 
                 if rmse < best_rmse:
                     best_rmse = rmse

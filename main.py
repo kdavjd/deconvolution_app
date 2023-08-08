@@ -9,12 +9,16 @@ import pandas as pd
 from src.math_operations import MathOperations
 from src.ui import UIInitializer
 from src.event_handler import EventHandler
+import logging
+from scipy.optimize import minimize
 
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
 import scienceplots
 plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
     
 class MainApp(QWidget):
     """Главное приложение."""
@@ -60,8 +64,30 @@ class MainApp(QWidget):
     def options_mode(self):        
         self.table_manager.fill_table('options')
     
-    def compute_peaks(self):        
-        self.event_handler.compute_peaks_button_pushed()    
+    def compute_peaks(self):
+             
+        def objective(coefficients):
+            return self.event_handler.compute_peaks_button_pushed(coefficients)
+
+        # Начальные значения коэффициентов
+        initial_coefficients = [-1, -1]
+
+        # Ограничения для коэффициентов
+        constraints = [
+            {'type': 'ineq', 'fun': lambda x: -0.01 - x[0]},
+            {'type': 'ineq', 'fun': lambda x: x[0] + 4},
+            {'type': 'ineq', 'fun': lambda x: -0.01 - x[1]},
+            {'type': 'ineq', 'fun': lambda x: x[1] + 4},
+        ]
+
+        # Запускаем процесс оптимизации
+        result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP')
+
+        # Лучшие значения коэффициентов
+        best_coefficients = result.x
+
+        logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
+        self.event_handler.compute_peaks_button_pushed(best_coefficients)
 
     def add_diff(self):        
         self.event_handler.add_diff_button_pushed()

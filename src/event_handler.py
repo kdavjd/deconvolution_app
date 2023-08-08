@@ -34,31 +34,38 @@ class EventHandler:
         self.ui_initializer.combo_box_y.setCurrentText(new_column_name)
 
     def get_init_params(self):
-        logger.info("Начало метода get_init_params.")        
+        logger.debug("Начало метода get_init_params.")        
         init_params = []
         for index, row in self.table_manager.data['gauss'].iterrows():
             logger.debug(f"Обработка строки {index}: height={row['height']}, center={row['center']}, width={row['width']}")
             init_params.extend([row['height'], row['center'], row['width']])
         logger.debug(f"Длина начальных параметров: {len(init_params)}")
-        logger.info(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
+        logger.debug(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
         return init_params
 
-    def update_gaussian_data(self, best_params, best_combination):
-        #logger.info("Начало метода update_gaussian_data.")
+    def update_gaussian_data(self, best_params, best_combination, coeff_1) :
+        logger.debug("Начало метода update_gaussian_data.")        
+        
+        gaussian_data = self.table_manager.data['gauss'].copy()        
+        
         for i, peak_type in enumerate(best_combination):
             height = best_params[3*i]
             center = best_params[3*i+1]
             width = best_params[3*i+2]
-            
-            self.table_manager.data['gauss'].at[i, 'height'] = height
-            self.table_manager.data['gauss'].at[i, 'center'] = center
-            self.table_manager.data['gauss'].at[i, 'width'] = width
-            self.table_manager.data['gauss'].at[i, 'coeff_1'] = float(self.table_manager.data['options']['coeff_1'].values)
-            self.table_manager.data['gauss'].at[i, 'type'] = peak_type
-        #logger.info("Конец метода update_gaussian_data.")
+            coeff_ = coeff_1[i]
+
+            gaussian_data.at[i, 'height'] = height
+            gaussian_data.at[i, 'center'] = center
+            gaussian_data.at[i, 'width'] = width
+            gaussian_data.at[i, 'type'] = peak_type
+            gaussian_data.at[i, 'coeff_1'] = coeff_
+        
+        self.table_manager.update_table_data('gauss', gaussian_data)
+
+        logger.info(gaussian_data)
     
     def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
-        logger.info("Начало метода add_reaction_cummulative_func.")
+        logger.debug("Начало метода add_reaction_cummulative_func.")
         for i, peak_type in enumerate(best_combination):
             height = best_params[3 * i]
             center = best_params[3 * i + 1]
@@ -77,31 +84,34 @@ class EventHandler:
 
         new_column_name = y_column + '_cummulative'
         self.viewer.df[new_column_name] = cummulative_func
-        logger.info("Конец метода add_reaction_cummulative_func.")
+        logger.debug("Конец метода add_reaction_cummulative_func.")
 
-    def compute_peaks_button_pushed(self):
+    def compute_peaks_button_pushed(self, coeff_1: list[float]):
+        logger.info(f'Получены коэффициенты: {str(coeff_1)}')
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
         y_column_name = self.ui_initializer.combo_box_y.currentText() 
         init_params = self.get_init_params()
         x_values = self.table_manager.get_column_data(x_column_name)
         y_values = self.table_manager.get_column_data(y_column_name)
 
-        maxfev = int(self.table_manager.data['options']['maxfev'].values)
-        coeff_1 = float(self.table_manager.data['options']['coeff_1'].values)
+        maxfev = int(self.table_manager.data['options']['maxfev'].values)        
+        num_peaks = len(init_params) // 3
         best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-            x_values, y_values, init_params, maxfev, coeff_1)
+        x_values, y_values, num_peaks, init_params, maxfev, coeff_1)
         
         cummulative_func = np.zeros(len(x_values))
 
-        self.update_gaussian_data(best_params, best_combination)
+        self.update_gaussian_data(best_params, best_combination, coeff_1)        
         
         self.add_reaction_cummulative_func(
             best_params, best_combination, x_values, y_column_name, cummulative_func)
         
-        self.table_manager.data['options']['rmse'] = best_rmse
-                              
-        self.table_manager.fill_table('gauss')   
+        self.table_manager.data['options']['rmse'] = best_rmse                              
+        
         self.rebuild_gaussians()
+        
+        self.table_manager.fill_table('gauss')
+        return best_rmse
         
     def connect_signals(self):  
         self.table_manager.tables['gauss'].clicked.connect(self.handle_table_clicked)
@@ -171,7 +181,9 @@ class EventHandler:
             if row['type'] == 'gauss':
                 y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
             else:
-                y = self.math_operations.fraser_suzuki(x, row['height'], row['center'], row['width'], -1)
+                y = self.math_operations.fraser_suzuki(x, row['height'], row['center'], row['width'], row['coeff_1'])
+                _coef = str(row['coeff_1'])
+                logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
             ax.plot(x, y, 'r-')
 
         self.ui_initializer.canvas.draw()
