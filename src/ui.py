@@ -31,17 +31,18 @@ class UIInitializer(QWidget):
 
         # Создание главного разделителя
         main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.addWidget(buttons_widget)
-        main_splitter.addWidget(tab_widget)
-        main_splitter.addWidget(self.console_widget)  # добавляем консоль справа
+        main_splitter.addWidget(buttons_widget) 
+        main_splitter.addWidget(tab_widget) 
+        main_splitter.addWidget(self.console_widget)   
 
-        # Установка размеров областей
         main_splitter.setStretchFactor(0, 1)
         main_splitter.setStretchFactor(1, 7)
-        main_splitter.setStretchFactor(2, 4)  # консоль занимает 1/5 часть справа
+        main_splitter.setStretchFactor(2, 4)
+        
+        self.main_splitter = main_splitter
 
         # Добавление разделителей на главный layout
-        main_layout = QVBoxLayout()
+        main_layout = QHBoxLayout()
         main_layout.addWidget(main_splitter)
 
         # Установка главного layout
@@ -94,7 +95,7 @@ class UIInitializer(QWidget):
         buttons_layout.addWidget(self.combo_box_x)
         buttons_layout.addWidget(self.combo_box_y)
         
-        buttons_layout.addStretch(1) # Добавление растяжимости
+        buttons_layout.addStretch(0) # Добавление растяжимости
 
         buttons_widget = QWidget()
         buttons_widget.setLayout(buttons_layout)
@@ -118,7 +119,7 @@ class UIInitializer(QWidget):
     def create_graph_widget(self):
         # Создание нового объекта Figure для хранения графика
         figure = Figure()
-        #figure.set_size_inches(10, 5, forward=True)
+        figure.set_size_inches(7, 5, forward=True)
 
         # Создание объекта FigureCanvas для отображения графика
         canvas = FigureCanvas(figure)
@@ -126,7 +127,7 @@ class UIInitializer(QWidget):
         # Создание layout для размещения холста с графиком
         graph_layout = QVBoxLayout()
         graph_layout.addWidget(canvas)
-        graph_layout.addStretch(1)
+        #graph_layout.addStretch(1)
         
         # Создание виджета для хранения layout
         graph_widget = QWidget()

@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QDialog, QVBoxLayout, QLabel, QPushButton, QDoubleSpinBox
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 from PyQt5.QtCore import Qt
 from src.csv_viewer import CSVViewer
 from src.pandas_model import PandasModel
@@ -20,7 +20,7 @@ plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
     
-class MainApp(QWidget):
+class MainApp(QMainWindow):
     """Главное приложение."""
     functions_data = pd.DataFrame(columns=['reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
     options_data = pd.DataFrame({'maxfev': [2000], 'coeff_1': [-1], 'rmse':[0.0]})
@@ -38,7 +38,7 @@ class MainApp(QWidget):
         # Создаем другие объекты, передавая в них ссылку на viewer
         self.table_manager = TableManager(self.viewer, self.math_operations, [*self.table_dict.keys()], self.table_dict)
         self.ui_initializer = UIInitializer(self, self.viewer)
-
+        self.setCentralWidget(self.ui_initializer.main_splitter)
         # Инициализируем CSVViewer, передав в него ссылки на table_manager и ui_initializer
         self.viewer.initialize(self.table_manager, self.ui_initializer) 
         
