@@ -159,8 +159,8 @@ class EventHandler:
     def connect_canvas_events(self):
         self.table_manager.fill_table('gauss')       
         
-        self.press_cid = self.ui_initializer.canvas.mpl_connect('button_press_event', self.on_press)
-        self.release_cid = self.ui_initializer.canvas.mpl_connect('button_release_event', self.on_release)
+        self.press_cid = self.ui_initializer.canvas1.mpl_connect('button_press_event', self.on_press)
+        self.release_cid = self.ui_initializer.canvas1.mpl_connect('button_release_event', self.on_release)
 
     def disconnect_canvas_events(self):        
         self.table_manager.fill_table(self.viewer.file_name)        
