@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 import scienceplots
 plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
     
 class MainApp(QMainWindow):
     """Главное приложение."""
@@ -45,6 +45,7 @@ class MainApp(QMainWindow):
         self.event_handler = EventHandler(self)
         self.table_manager.models['gauss'].data_changed_signal.connect(self.event_handler.rebuild_gaussians) 
         self.event_handler.connect_signals()
+        self.event_handler.update_console_signal.connect(self.ui_initializer.update_console)
     
     def load_csv_table(self):
         self.viewer.get_csv()
@@ -65,29 +66,29 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table('options')
     
     def compute_peaks(self):
-             
+          
         def objective(coefficients):
             return self.event_handler.compute_peaks_button_pushed(coefficients)
+        
+        if self.table_manager.data['gauss']['coeff_1'].size > 0:
+            initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
+            logger.debug(f'содержание initial_coefficients {initial_coefficients}')
+            # Ограничения для коэффициентов
+            constraints = [
+                {'type': 'ineq', 'fun': lambda x: -0.01 - x[0]},
+                {'type': 'ineq', 'fun': lambda x: x[0] + 4},
+                {'type': 'ineq', 'fun': lambda x: -0.01 - x[1]},
+                {'type': 'ineq', 'fun': lambda x: x[1] + 4},
+            ]
 
-        # Начальные значения коэффициентов
-        initial_coefficients = [-1, -1]
+            # Запускаем процесс оптимизации
+            result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP')
 
-        # Ограничения для коэффициентов
-        constraints = [
-            {'type': 'ineq', 'fun': lambda x: -0.01 - x[0]},
-            {'type': 'ineq', 'fun': lambda x: x[0] + 4},
-            {'type': 'ineq', 'fun': lambda x: -0.01 - x[1]},
-            {'type': 'ineq', 'fun': lambda x: x[1] + 4},
-        ]
+            # Лучшие значения коэффициентов
+            best_coefficients = result.x
 
-        # Запускаем процесс оптимизации
-        result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP')
-
-        # Лучшие значения коэффициентов
-        best_coefficients = result.x
-
-        logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
-        self.event_handler.compute_peaks_button_pushed(best_coefficients)
+            logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
+            self.event_handler.compute_peaks_button_pushed(best_coefficients)
 
     def add_diff(self):        
         self.event_handler.add_diff_button_pushed()

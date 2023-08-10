@@ -1,13 +1,16 @@
 from PyQt5.QtWidgets import QApplication, QLineEdit, QInputDialog, QTableWidgetItem
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QObject, pyqtSignal
 import numpy as np
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class EventHandler:
+class EventHandler(QObject):
+    update_console_signal = pyqtSignal(str)
     def __init__(self, main_app):
+        super().__init__()
         self.main_app = main_app
         self.viewer = main_app.viewer
         self.ui_initializer = main_app.ui_initializer
@@ -84,6 +87,11 @@ class EventHandler:
         logger.debug("Конец метода add_reaction_cummulative_func.")
 
     def compute_peaks_button_pushed(self, coeff_1: list[float]):
+        coefficients_str = ', '.join(map(str, coeff_1))
+        self.main_app.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
+        QApplication.processEvents()
+
+
         logger.info(f'Получены коэффициенты: {str(coeff_1)}')
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
         y_column_name = self.ui_initializer.combo_box_y.currentText() 
@@ -97,7 +105,7 @@ class EventHandler:
         x_values, y_values, num_peaks, init_params, maxfev, coeff_1)
         
         cummulative_func = np.zeros(len(x_values))
-
+        self.main_app.ui_initializer.console_widget.append(f'Лучшее значение RMSE: {best_rmse}')
                
         best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
         self.table_manager.update_table_data('gauss', best_gaussian_data)
@@ -173,18 +181,21 @@ class EventHandler:
     def rebuild_gaussians(self):
         """Перестроение всех гауссиан по данным в таблице."""
         self.plot_graph()  
-        ax = self.ui_initializer.figure1.get_axes()[0] 
+        ax = self.ui_initializer.figure1.get_axes()[0]
+        cumfunc = np.zeros(1000)
         for _, row in self.table_manager.data['gauss'].iterrows(): 
             x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
             if row['type'] == 'gauss':
                 y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
             else:
-                y = self.math_operations.fraser_suzuki(x, row['height'], row['center'], row['width'], row['coeff_1'])
+                y = self.math_operations.fraser_suzuki(
+                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_1']))
                 _coef = str(row['coeff_1'])
                 logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
-            ax.plot(x, y, 'r-')
-
+            ax.plot(x, y,)
+            cumfunc += y
+        ax.plot(x, cumfunc,)
         self.ui_initializer.canvas1.draw()
         
     def plot_graph(self):

@@ -3,6 +3,8 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QTextCursor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from PyQt5.QtCore import pyqtSlot
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -173,6 +175,10 @@ class UIInitializer(QWidget):
     def resizeEvent(self, event):
         logger.debug(f"Окно приложения изменило размер на {event.size()}")
         super(UIInitializer, self).resizeEvent(event)
+        
+    @pyqtSlot(str)
+    def update_console(self, text):
+        self.console_widget.append(text)
         
 class QTextEditLogger(logging.Handler):
     def __init__(self, widget):
