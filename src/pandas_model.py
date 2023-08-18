@@ -3,17 +3,21 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, pyqtSignal
 
 class PandasModel(QAbstractTableModel):
     """
-    Класс PandasModel, наследующий от QAbstractTableModel. Используется для взаимодействия 
-    между pandas DataFrame и QTableView.
+    Класс для взаимодействия между pandas DataFrame и QTableView.
+
+    Attributes:
+        data_changed_signal (pyqtSignal): Сигнал изменения данных.
     """
-    data_changed_signal = pyqtSignal()  # Было: dataChangedSignal
+    
+    data_changed_signal = pyqtSignal()
 
     def __init__(self, data, parent=None):
         """
-        Инициализатор класса.
+        Инициализация класса.
 
-        :param data: pandas DataFrame, который будет отображаться.
-        :param parent: родительский виджет.
+        Args:
+            data (DataFrame): pandas DataFrame для отображения.
+            parent (QWidget, optional): родительский виджет.
         """
         QAbstractTableModel.__init__(self, parent)
         self._data = data
@@ -22,8 +26,11 @@ class PandasModel(QAbstractTableModel):
         """
         Возвращает количество строк в DataFrame.
 
-        :param parent: родительский индекс (не используется, оставлен для совместимости).
-        :return: число строк.
+        Args:
+            parent (QModelIndex, optional): родительский индекс (не используется).
+
+        Returns:
+            int: число строк.
         """
         return self._data.shape[0]
 
@@ -31,8 +38,11 @@ class PandasModel(QAbstractTableModel):
         """
         Возвращает количество столбцов в DataFrame.
 
-        :param parent: родительский индекс (не используется, оставлен для совместимости).
-        :return: число столбцов.
+        Args:
+            parent (QModelIndex, optional): родительский индекс (не используется).
+
+        Returns:
+            int: число столбцов.
         """
         return self._data.shape[1]
 
@@ -40,9 +50,12 @@ class PandasModel(QAbstractTableModel):
         """
         Возвращает данные для отображения в таблице.
 
-        :param index: индекс ячейки.
-        :param role: роль данных.
-        :return: данные для отображения в ячейке или None, если ячейка недействительна.
+        Args:
+            index (QModelIndex): индекс ячейки.
+            role (Qt.ItemDataRole, optional): роль данных.
+
+        Returns:
+            QVariant: данные для отображения или None, если ячейка недействительна.
         """
         if index.isValid():
             if role == Qt.DisplayRole:
@@ -50,6 +63,17 @@ class PandasModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """
+        Возвращает данные заголовка.
+
+        Args:
+            section (int): номер раздела (столбца или строки).
+            orientation (Qt.Orientation): ориентация заголовка (горизонтальная или вертикальная).
+            role (Qt.ItemDataRole, optional): роль данных.
+
+        Returns:
+            QVariant: данные заголовка или None, если данные недоступны.
+        """
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:
@@ -59,12 +83,15 @@ class PandasModel(QAbstractTableModel):
 
     def set_data(self, index, value, role=Qt.EditRole):
         """
-        Позволяет изменить данные в DataFrame.
+        Изменяет данные в DataFrame.
 
-        :param index: индекс ячейки.
-        :param value: новое значение.
-        :param role: роль данных.
-        :return: True, если данные были успешно изменены, иначе False.
+        Args:
+            index (QModelIndex): индекс ячейки.
+            value (QVariant): новое значение.
+            role (Qt.ItemDataRole, optional): роль данных.
+
+        Returns:
+            bool: True, если данные успешно изменены, иначе False.
         """
         row = index.row()
         col = index.column()
@@ -79,7 +106,10 @@ class PandasModel(QAbstractTableModel):
         """
         Определяет возможности ячейки.
 
-        :param index: индекс ячейки.
-        :return: набор флагов, определяющих возможности ячейки.
+        Args:
+            index (QModelIndex): индекс ячейки.
+
+        Returns:
+            Qt.ItemFlags: флаги, определяющие возможности ячейки.
         """
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
