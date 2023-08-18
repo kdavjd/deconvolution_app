@@ -1,12 +1,64 @@
+from PyQt5.QtCore import QThread, pyqtSignal
 import numpy as np
 from scipy.optimize import curve_fit
 from itertools import product
 import logging
+import threading
 
-logging.basicConfig(level=logging.info)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+class ComputeCombinationThread(QThread):
+    
+    def __init__(self, x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock):
+        super().__init__()
+        self.x_values = x_values
+        self.y_values = y_values
+        self.combination = combination
+        self.initial_params = initial_params
+        self.maxfev = maxfev
+        self.bounds = bounds
+        self.coeff_1 = coeff_1
+        self.results_dict = results_dict
+        self.lock = lock
+        self.result = None
+
+    def run(self):
+        try:
+            logger.debug(f"Запуск потока для комбинации {self.combination}.")
+
+            def fit_function(x, *params):
+                return MathOperations.peaks(x, self.combination, self.coeff_1, *params)
+
+            popt, _ = curve_fit(fit_function, self.x_values, self.y_values, p0=self.initial_params, maxfev=self.maxfev, bounds=self.bounds, method='trf')
+            predicted = MathOperations.peaks(self.x_values, self.combination, self.coeff_1, *popt)
+            rmse = np.sqrt(np.mean((self.y_values - predicted) ** 2))
+            self.result = (self.combination, popt, rmse)
+            
+            with self.lock:
+                if self.result:
+                    logger.debug(f"Подготовка результата для комбинации {self.combination}: {self.result}")
+                    self.results_dict[self.combination] = {'popt': self.result[1], 'rmse': self.result[2]}
+                else:
+                    logger.warning(f"Результат не найден для комбинации {self.combination}")
+                logger.debug(f"Поток для комбинации {self.combination} завершился успешно.")
+        except RuntimeError:
+            logger.exception(f"Не удалось подобрать комбинацию: {self.combination}")
+        except Exception as e:
+            logger.exception(f"Неожиданное исключение в потоке для комбинации {self.combination}: {str(e)}")
+         
 
 class MathOperations:
+    
+    @staticmethod
+    def handle_thread_finished(combination, array_data, float_value, results_dict):
+        logger.debug("Начало исполнения handle_thread_finished")
+        if combination:
+            logger.debug(f"Добавление результатов для комбинации {combination} в results")
+            results_dict.update({combination: {'popt': array_data, 'rmse': float_value}})
+        else:
+            logger.warning(f"Получен пустой результат в handle_thread_finished")    
 
     @staticmethod
     def gaussian(x: np.ndarray, a0: float, a1: float, a2: float) -> np.ndarray:
@@ -47,9 +99,7 @@ class MathOperations:
         logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
         
         peak_types = ['gauss', 'fraser']
-        
         combinations = list(product(peak_types, repeat=num_peaks))
-        logger.debug(f"Комбинации: {combinations}")
         
         best_rmse = np.inf
         best_popt = None
@@ -60,31 +110,30 @@ class MathOperations:
 
         bounds = (lower_bounds, upper_bounds)
         
+        results_dict = {}  # Пустой словарь для результатов
+        lock = threading.Lock()
+        threads = []
+        
         for combination in combinations:
-            try:
-                logger.debug(f"Пытаемся подобрать комбинацию: {combination}")
-                
-                def fit_function(x, *params):
-                    return MathOperations.peaks(x, combination, coeff_1, *params)
-                
-                popt, pcov = curve_fit(
-                    fit_function, x_values, y_values, p0=initial_params, maxfev=maxfev, bounds=bounds, method='trf')                
+            thread = ComputeCombinationThread(
+                x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock)
+            thread.start()
+            threads.append(thread)
+        
+        # Ожидание завершения всех потоков
+        for thread in threads:
+            thread.wait()
 
-                logger.debug(f"Результат popt из curve_fit: {popt}")
-                logger.debug(f"Длина popt: {len(popt)}")
-                
-                predicted = MathOperations.peaks(x_values, combination, coeff_1, *popt)
-
-                rmse = np.sqrt(np.mean((y_values - predicted)**2))
-                logger.debug(f"Комбинация: {combination} достигла RMSE: {rmse}")
-
-                if rmse < best_rmse:
-                    best_rmse = rmse
-                    best_popt = popt
-                    best_combination = combination
-            except RuntimeError:
-                logger.warning(f"Не удалось подобрать комбинацию: {combination}")
+        if not results_dict:
+            logger.error("Не удалось найти подходящую комбинацию. Все потоки завершились ошибками.")
+            return None, None, None
+        
+        # Нахождение лучшей комбинации
+        best_combination = min(results_dict, key=lambda k: results_dict[k]['rmse'])
+        best_popt = results_dict[best_combination]['popt']
+        best_rmse = results_dict[best_combination]['rmse']
 
         logger.info(f"Лучшая комбинация: {best_combination} с RMSE: {best_rmse}")
         logger.debug("Конец метода compute_best_peaks.")
+        
         return best_popt, best_combination, best_rmse

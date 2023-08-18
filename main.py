@@ -66,10 +66,41 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table('options')
     
     def compute_peaks(self):
-          
+        # Внутренняя функция для определения целевой функции
         def objective(coefficients):
-            return self.event_handler.compute_peaks_button_pushed(coefficients)
-        
+            coefficients_str = ', '.join(map(str, coefficients))
+            self.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
+            QApplication.processEvents()
+
+            logger.info(f'Получены коэффициенты: {str(coefficients)}')
+            x_column_name = self.ui_initializer.combo_box_x.currentText()
+            y_column_name = self.ui_initializer.combo_box_y.currentText()
+            init_params = self.event_handler.get_init_params()
+            x_values = self.table_manager.get_column_data(x_column_name)
+            y_values = self.table_manager.get_column_data(y_column_name)
+
+            maxfev = int(self.table_manager.data['options']['maxfev'].values)
+            num_peaks = len(init_params) // 3
+            best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
+                x_values, y_values, num_peaks, init_params, maxfev, coefficients
+            )
+
+            cummulative_func = np.zeros(len(x_values))
+            self.ui_initializer.console_widget.append(f'Лучшее значение RMSE: {best_rmse}')
+
+            best_gaussian_data = self.event_handler.update_gaussian_data(best_params, best_combination, coefficients)
+            self.table_manager.update_table_data('gauss', best_gaussian_data)
+
+            self.event_handler.add_reaction_cummulative_func(
+                best_params, best_combination, x_values, y_column_name, cummulative_func)
+
+            self.table_manager.data['options']['rmse'] = best_rmse
+
+            self.event_handler.rebuild_gaussians()
+
+            self.table_manager.fill_table('gauss')
+            return best_rmse
+
         if self.table_manager.data['gauss']['coeff_1'].size > 0:
             initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
             logger.debug(f'содержание initial_coefficients {initial_coefficients}')
@@ -98,6 +129,7 @@ class MainApp(QMainWindow):
         
     def create_new_table():        
         pass
+    
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
