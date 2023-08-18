@@ -12,11 +12,84 @@ class EventHandler(QObject):
     def __init__(self, main_app):
         super().__init__()
         self.main_app = main_app
-        self.viewer = main_app.viewer
-        self.ui_initializer = main_app.ui_initializer
-        self.table_manager = main_app.table_manager
-        self.math_operations = main_app.math_operations 
+        self.graph_handler = GraphHandler(main_app)
+        self.data_handler = DataHandler(main_app)
+        self.ui_handler = UIHandler(main_app)   
    
+        
+class GraphHandler(QObject):
+    def __init__(self, main_app):
+        super().__init__()
+        self.main_app = main_app
+        self.ui_initializer = main_app.ui_initializer
+        self.math_operations = main_app.math_operations
+        self.viewer = main_app.viewer
+        self.table_manager = main_app.table_manager
+
+    def on_release(self, event):
+        """Обработка отпускания кнопки мыши."""
+        release_x = event.xdata
+        width = 2 * abs(release_x - self.press_x)
+        x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText())
+        x = np.linspace(min(x_column_data), max(x_column_data), 1000)
+        y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
+
+        ax = self.ui_initializer.figure1.get_axes()[0]
+        ax.plot(x, y, 'r-')
+        self.ui_initializer.canvas1.draw()
+        
+        self.table_manager.add_gaussian_to_table(self.press_y, self.press_x, width)
+
+    def on_press(self, event):
+        """Обработка нажатия кнопки мыши на оси."""
+        self.press_x = event.xdata
+        self.press_y = event.ydata
+
+    def rebuild_gaussians(self):
+        """Перестроение всех гауссиан по данным в таблице."""
+        self.plot_graph()  
+        ax = self.ui_initializer.figure1.get_axes()[0]
+        cumfunc = np.zeros(1000)
+        for _, row in self.table_manager.data['gauss'].iterrows(): 
+            x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
+            x = np.linspace(min(x_column_data), max(x_column_data), 1000)
+            if row['type'] == 'gauss':
+                y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
+            else:
+                y = self.math_operations.fraser_suzuki(
+                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_1']))
+                _coef = str(row['coeff_1'])
+                logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
+            ax.plot(x, y,)
+            cumfunc += y
+        ax.plot(x, cumfunc,)
+        self.ui_initializer.canvas1.draw()
+
+    def plot_graph(self):
+        """Построение графика."""
+        x_column = self.ui_initializer.combo_box_x.currentText() 
+        y_column = self.ui_initializer.combo_box_y.currentText() 
+
+        if not x_column or not y_column:  
+            return
+
+        self.ui_initializer.figure1.clear() 
+
+        ax = self.ui_initializer.figure1.add_subplot(111) 
+        ax.plot(self.viewer.df[x_column], self.viewer.df[y_column], 'b-')
+
+        self.ui_initializer.canvas1.draw()
+
+class DataHandler(QObject):
+    def __init__(self, main_app):
+        super().__init__()
+        self.main_app = main_app
+        self.viewer = main_app.viewer
+        self.table_manager = main_app.table_manager
+        self.math_operations = main_app.math_operations
+        self.ui_initializer = main_app.ui_initializer
+        self.graph_handler = GraphHandler(main_app)
+
     def add_diff_button_pushed(self):
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
@@ -63,7 +136,7 @@ class EventHandler(QObject):
             gaussian_data.at[i, 'coeff_1'] = coeff_
 
         return gaussian_data
-    
+
     def add_reaction_cummulative_func(self, best_params, best_combination, x_values, y_column, cummulative_func):
         logger.debug("Начало метода add_reaction_cummulative_func.")
         for i, peak_type in enumerate(best_combination):
@@ -86,11 +159,10 @@ class EventHandler(QObject):
         self.viewer.df[new_column_name] = cummulative_func
         logger.debug("Конец метода add_reaction_cummulative_func.")
 
-    def compute_peaks_button_pushed(self, coeff_1: list[float]):
+    def compute_peaks_button_pushed(self, coeff_1: list[float], best_rmse=None):
         coefficients_str = ', '.join(map(str, coeff_1))
-        self.main_app.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
+        self.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
         QApplication.processEvents()
-
 
         logger.info(f'Получены коэффициенты: {str(coeff_1)}')
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
@@ -101,12 +173,13 @@ class EventHandler(QObject):
 
         maxfev = int(self.table_manager.data['options']['maxfev'].values)        
         num_peaks = len(init_params) // 3
-        best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-        x_values, y_values, num_peaks, init_params, maxfev, coeff_1)
+        if best_rmse is None:
+            best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
+                x_values, y_values, num_peaks, init_params, maxfev, coeff_1)
         
         cummulative_func = np.zeros(len(x_values))
-        self.main_app.ui_initializer.console_widget.append(f'Лучшее значение RMSE: {best_rmse}')
-               
+        self.main_app.ui_initializer.console_widget.append(f'Лучшее значение RMSE: {np.round(best_rmse,4)}')
+            
         best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
         self.table_manager.update_table_data('gauss', best_gaussian_data)
         
@@ -115,11 +188,20 @@ class EventHandler(QObject):
         
         self.table_manager.data['options']['rmse'] = best_rmse                              
         
-        self.rebuild_gaussians()
+        self.graph_handler.rebuild_gaussians()
         
         self.table_manager.fill_table('gauss')
         return best_rmse
-        
+    
+class UIHandler(QObject):
+    def __init__(self, main_app):
+        super().__init__()
+        self.main_app = main_app
+        self.ui_initializer = main_app.ui_initializer
+        self.table_manager = main_app.table_manager
+        self.viewer = main_app.viewer
+        self.graph_handler = GraphHandler(main_app)
+
     def connect_signals(self):  
         self.table_manager.tables['gauss'].clicked.connect(self.handle_table_clicked)
         self.table_manager.tables['options'].clicked.connect(self.handle_table_clicked)
@@ -144,31 +226,14 @@ class EventHandler(QObject):
             if ok and new_value != current_value:
                 # Устанавливаем новое значение в модели
                 model.set_data(q_model_index, new_value, Qt.EditRole)
-        
-    def on_release(self, event):
-        """Обработка отпускания кнопки мыши."""
-        release_x = event.xdata
-        width = 2 * abs(release_x - self.press_x)
-        x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText())
-        x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-        y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
-
-        ax = self.ui_initializer.figure1.get_axes()[0]
-        ax.plot(x, y, 'r-')
-        self.ui_initializer.canvas1.draw()
-
-        self.table_manager.add_gaussian_to_table(self.press_y, self.press_x, width)
-        
-    def on_press(self, event):
-        """Обработка нажатия кнопки мыши на оси."""
-        self.press_x = event.xdata
-        self.press_y = event.ydata
 
     def connect_canvas_events(self):
         self.table_manager.fill_table('gauss')       
-        
-        self.press_cid = self.ui_initializer.canvas1.mpl_connect('button_press_event', self.on_press)
-        self.release_cid = self.ui_initializer.canvas1.mpl_connect('button_release_event', self.on_release)
+
+        # Use the stored graph_handler reference
+        self.press_cid = self.ui_initializer.canvas1.mpl_connect('button_press_event', self.graph_handler.on_press)
+        self.release_cid = self.ui_initializer.canvas1.mpl_connect('button_release_event', self.graph_handler.on_release)
+
 
     def disconnect_canvas_events(self):        
         self.table_manager.fill_table(self.viewer.file_name)        
@@ -178,37 +243,3 @@ class EventHandler(QObject):
         
         self.rebuild_gaussians()
 
-    def rebuild_gaussians(self):
-        """Перестроение всех гауссиан по данным в таблице."""
-        self.plot_graph()  
-        ax = self.ui_initializer.figure1.get_axes()[0]
-        cumfunc = np.zeros(1000)
-        for _, row in self.table_manager.data['gauss'].iterrows(): 
-            x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
-            x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-            if row['type'] == 'gauss':
-                y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
-            else:
-                y = self.math_operations.fraser_suzuki(
-                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_1']))
-                _coef = str(row['coeff_1'])
-                logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
-            ax.plot(x, y,)
-            cumfunc += y
-        ax.plot(x, cumfunc,)
-        self.ui_initializer.canvas1.draw()
-        
-    def plot_graph(self):
-        """Построение графика."""
-        x_column = self.ui_initializer.combo_box_x.currentText() 
-        y_column = self.ui_initializer.combo_box_y.currentText() 
-
-        if not x_column or not y_column:  
-            return
-
-        self.ui_initializer.figure1.clear() 
-
-        ax = self.ui_initializer.figure1.add_subplot(111) 
-        ax.plot(self.viewer.df[x_column], self.viewer.df[y_column], 'b-')
-
-        self.ui_initializer.canvas1.draw()
