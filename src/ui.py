@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QComboBox, QLabel, QSplitter, QTabWidget, QTextEdit
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QComboBox, QLabel, QSplitter, QTabWidget, QTextEdit, QApplication
+from PyQt5.QtCore import QSize, Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QTextCursor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -12,11 +12,15 @@ logger.setLevel(logging.DEBUG)
 
 
 class UIInitializer(QWidget):
+    request_column_names_signal = pyqtSignal()  # сигнал для запроса имен столбцов
+    send_column_names_signal = pyqtSignal(str, str)  # сигнал для отправки имен столбцов
+    
     def __init__(self, parent, viewer):
         super().__init__(parent)
         self.parent = parent
         self.viewer = viewer
-
+        self.request_column_names_signal.connect(self.provide_column_names)
+        
         # Установка минимального размера окна
         self.setMinimumSize(QSize(1220, 920))  
 
@@ -175,7 +179,17 @@ class UIInitializer(QWidget):
     def resizeEvent(self, event):
         logger.debug(f"Окно приложения изменило размер на {event.size()}")
         super(UIInitializer, self).resizeEvent(event)
-        
+    
+    @pyqtSlot()
+    def refresh_gui(self):
+        QApplication.processEvents()    
+    
+    @pyqtSlot()
+    def provide_column_names(self):
+        x_column_name = self.combo_box_x.currentText() 
+        y_column_name = self.combo_box_y.currentText()
+        self.send_column_names_signal.emit(x_column_name, y_column_name)
+      
     @pyqtSlot(str)
     def update_console(self, text):
         self.console_widget.append(text)

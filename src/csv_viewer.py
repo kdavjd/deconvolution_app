@@ -19,11 +19,12 @@ class CSVViewer: # Класс отвечает за обработку CSV фа�
         # Эта функция загружает CSV файл, выбранный пользователем в главном окне приложения.        
         self.file_path, _ = QFileDialog.getOpenFileName(None, 'Open CSV', os.getenv('HOME'), 'CSV(*.csv)')
         if self.file_path: 
-            self.load_csv() 
-            self.table_manager.fill_combo_boxes(self.ui_initializer.combo_box_x, self.ui_initializer.combo_box_y)
+            self.load_csv()
+            
             file_name_with_extension = os.path.basename(self.file_path)
             self.file_name, _ = os.path.splitext(file_name_with_extension)
-            self.file_name = self.file_name.strip() 
+            self.file_name = self.file_name.strip()
+           
 
     def load_csv(self): # Было: loadCSV
         # Эта функция считывает данные из CSV файла и сохраняет их в DataFrame.

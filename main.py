@@ -50,11 +50,12 @@ class MainApp(QMainWindow):
     def load_csv_table(self):
         self.viewer.get_csv()
         self.table_dict.update({self.viewer.file_name: self.viewer.df})
-        
         # Удаление всех ключей со значением None
         self.table_dict = {k: v for k, v in self.table_dict.items() if k is not None} 
         self.table_manager.update_table_data(self.viewer.file_name, self.viewer.df)
-        self.table_manager.fill_table(self.viewer.file_name)       
+        self.table_manager.fill_table(self.viewer.file_name)
+        box_list = [self.ui_initializer.combo_box_x, self.ui_initializer.combo_box_y]
+        self.table_manager.fill_combo_boxes(self.viewer.file_name, box_list, True)
     
     def switch_to_interactive_mode(self, activated):
         if activated:
@@ -67,10 +68,14 @@ class MainApp(QMainWindow):
    
     def compute_peaks(self):
         # Внутренняя функция для определения целевой функции
-        def objective(coefficients):
+        x_column_name = self.ui_initializer.combo_box_x.currentText() 
+        y_column_name = self.ui_initializer.combo_box_y.currentText()
+        
+        def objective(coefficients): 
             coefficients_str = ', '.join(map(str, np.round(coefficients,4)))
             self.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
-            best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(coefficients)
+            best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
+                coefficients, x_column_name, y_column_name)
             return best_rmse
 
         if self.table_manager.data['gauss']['coeff_1'].size > 0:
@@ -91,10 +96,13 @@ class MainApp(QMainWindow):
             best_coefficients = result.x
 
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
-            self.event_handler.data_handler.compute_peaks_button_pushed(best_coefficients)
+            self.event_handler.data_handler.compute_peaks_button_pushed(
+                best_coefficients, x_column_name, y_column_name)
 
-    def add_diff(self):        
-        self.event_handler.data_handler.add_diff_button_pushed()
+    def add_diff(self):
+        x_column_name = self.ui_initializer.combo_box_x.currentText() 
+        y_column_name = self.ui_initializer.combo_box_y.currentText()     
+        self.event_handler.data_handler.add_diff_button_pushed(x_column_name, y_column_name)
         
     def plot_graph(self):
         self.event_handler.graph_handler.plot_graph()

@@ -53,7 +53,7 @@ class GraphHandler(QObject):
         release_x = event.xdata
         width = 2 * abs(release_x - self.press_x)
         # Получение данных из таблицы
-        x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText())
+        x_column_data = self.table_manager.get_column_data(self.viewer.file_name, self.ui_initializer.combo_box_x.currentText())
         x = np.linspace(min(x_column_data), max(x_column_data), 1000)
         y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
 
@@ -86,8 +86,8 @@ class GraphHandler(QObject):
         self.plot_graph()  
         ax = self.ui_initializer.figure1.get_axes()[0]
         cumfunc = np.zeros(1000)
-        for _, row in self.table_manager.data['gauss'].iterrows(): 
-            x_column_data = self.table_manager.get_column_data(self.ui_initializer.combo_box_x.currentText()) 
+        for _, row in self.table_manager.data['gauss'].iterrows():
+            x_column_data = self.table_manager.get_column_data(self.viewer.file_name, self.ui_initializer.combo_box_x.currentText()) 
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
             if row['type'] == 'gauss':
                 y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])

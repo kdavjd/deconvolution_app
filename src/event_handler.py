@@ -17,7 +17,8 @@ class EventHandler(QObject):
         self.main_app = main_app
         self.graph_handler = GraphHandler(main_app)
         self.data_handler = DataHandler(main_app)
-        self.ui_handler = UIHandler(main_app)   
+        self.ui_handler = UIHandler(main_app) 
+         
    
         
 # class GraphHandler(QObject):

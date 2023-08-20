@@ -4,6 +4,7 @@ from scipy.optimize import curve_fit
 from itertools import product
 import logging
 import threading
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -93,7 +94,9 @@ class MathOperations:
 
     @staticmethod
     def compute_best_peaks(
-        x_values: np.array, y_values: np.array, num_peaks: int, initial_params: list, maxfev: int, coeff_1: list):
+        x_values: np.array, y_values: np.array, num_peaks: int, 
+        initial_params: list, maxfev: int, coeff_1: list
+        ) -> Tuple[np.array, Tuple[str, ...], float]:
         
         logger.debug("Начало вычисления лучших пиков.")
         logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
