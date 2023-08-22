@@ -8,6 +8,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class GraphHandler(QObject):
+    # Определение сигналов для каждого метода
+    on_release_signal = pyqtSignal(object)
+    on_press_signal = pyqtSignal(object)
+    rebuild_gaussians_signal = pyqtSignal()
+    plot_graph_signal = pyqtSignal()
     """
     Обработчик графиков для интерактивного рисования и анализа данных.
 
@@ -39,6 +44,12 @@ class GraphHandler(QObject):
         self.math_operations = main_app.math_operations
         self.viewer = main_app.viewer
         self.table_manager = main_app.table_manager
+
+        # Подключение сигналов к соответствующим слотам
+        self.on_release_signal.connect(self.on_release)
+        self.on_press_signal.connect(self.on_press)
+        self.rebuild_gaussians_signal.connect(self.rebuild_gaussians)
+        self.plot_graph_signal.connect(self.plot_graph)
 
     def on_release(self, event):
         """

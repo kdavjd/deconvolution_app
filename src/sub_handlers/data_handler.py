@@ -124,7 +124,7 @@ class DataHandler(QObject):
         options_data['rmse'] = best_rmse
         self.table_manager.update_table_signal.emit('options', options_data)
         
-        self.graph_handler.rebuild_gaussians()
+        self.graph_handler.rebuild_gaussians_signal.emit()
             
         self.table_manager.fill_table_signal.emit('gauss')
             
