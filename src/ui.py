@@ -79,6 +79,7 @@ class UIInitializer(QWidget):
         self.button_interactive = self.create_button('Interactive Mode', self.parent.switch_to_interactive_mode, checkable=True)
         self.button_add_diff = self.create_button('Add Diff', self.parent.add_diff)
         self.button_options_mode = self.create_button('Options Mode', self.parent.options_mode)
+        self.button_stop_computing = self.create_button('Stop Computing', self.parent.stop_computing_peaks)
         logger.debug("Кнопки созданы.")
         
     def create_combo_boxes(self):
@@ -98,6 +99,7 @@ class UIInitializer(QWidget):
         buttons_layout.addWidget(self.button_compute_peaks)
         buttons_layout.addWidget(self.button_interactive)
         buttons_layout.addWidget(self.button_add_diff)
+        buttons_layout.addWidget(self.button_stop_computing)
         buttons_layout.addWidget(self.combo_box_x)
         buttons_layout.addWidget(self.combo_box_y)
         

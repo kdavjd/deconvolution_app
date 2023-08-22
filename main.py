@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from src.csv_viewer import CSVViewer
 from src.pandas_model import PandasModel
 from src.table_manager import TableManager
@@ -19,7 +19,25 @@ plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-    
+
+
+class ComputePeaksThread(QThread):
+    # Можно добавить сигналы для обратной связи с основным потоком
+    progress_signal = pyqtSignal(float)
+
+    def __init__(self, main_app):
+        super().__init__()
+        self.main_app = main_app
+        self.is_running = True
+
+    def run(self):
+        # Ваш код для compute_peaks
+        # Используйте self.is_running в условии цикла или проверки, чтобы управлять выполнением
+        self.main_app.compute_peaks()
+
+    def stop(self):
+        self.is_running = False
+        
 class MainApp(QMainWindow):
     """Главное приложение."""
     functions_data = pd.DataFrame(columns=['reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
@@ -46,6 +64,8 @@ class MainApp(QMainWindow):
         self.table_manager.models['gauss'].data_changed_signal.connect(self.event_handler.graph_handler.rebuild_gaussians) 
         self.event_handler.ui_handler.connect_signals()
         self.event_handler.update_console_signal.connect(self.ui_initializer.update_console)
+        
+        self.stop_optimization = False
     
     def load_csv_table(self):
         self.viewer.get_csv()
@@ -67,6 +87,11 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table('options')    
    
     def compute_peaks(self):
+        
+        def callback(x):
+            if self.stop_optimization:
+                raise Exception("Остановка оптимизации по требованию пользователя")
+            
         # Внутренняя функция для определения целевой функции
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
         y_column_name = self.ui_initializer.combo_box_y.currentText()
@@ -90,22 +115,29 @@ class MainApp(QMainWindow):
             ]
 
             # Запускаем процесс оптимизации
-            result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP')
-
+            try:
+                result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP', callback=callback)
+            except Exception as e:                
+                logger.warning(str(e))
+                return
+            
             # Лучшие значения коэффициентов
             best_coefficients = result.x
 
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
             self.event_handler.data_handler.compute_peaks_button_pushed(
                 best_coefficients, x_column_name, y_column_name)
-
+            
+    def stop_computing_peaks(self):
+        self.stop_optimization = True
+        
     def add_diff(self):
         x_column_name = self.ui_initializer.combo_box_x.currentText() 
         y_column_name = self.ui_initializer.combo_box_y.currentText()     
         self.event_handler.data_handler.add_diff_button_pushed(x_column_name, y_column_name)
         
     def plot_graph(self):
-        self.event_handler.graph_handler.plot_graph()
+        self.event_handler.graph_handler.plot_graph_signal.emit()
         
     def create_new_table():        
         pass
