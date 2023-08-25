@@ -180,7 +180,7 @@ class TableManager(QObject):
         self.data['gauss'] = pd.concat([self.gaus, row_data], ignore_index=True)
         self.models['gauss'] = PandasModel(self.gaus)
         self.tables['gauss'].setModel(self.models['gauss'])
-        self.fill_table('gauss')
+        self.fill_table_signal.emit('gauss')
 
     @pyqtSlot(int)
     def delete_row(self, row_number):               

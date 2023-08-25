@@ -63,18 +63,11 @@ class GraphHandler(QObject):
         """
         release_x = event.xdata
         width = 2 * abs(release_x - self.press_x)
-        # Получение данных из таблицы
-        x_column_data = self.table_manager.get_column_data(self.viewer.file_name, self.ui_initializer.combo_box_x.currentText())
-        x = np.linspace(min(x_column_data), max(x_column_data), 1000)
-        y = self.math_operations.gaussian(x, self.press_y, self.press_x, width)
-
-        # Построение графика
-        ax = self.ui_initializer.figure1.get_axes()[0]
-        ax.plot(x, y, 'r-')
-        self.ui_initializer.canvas1.draw()
-        
+                
         # Добавление информации о гауссиане в таблицу
-        self.table_manager.add_gaussian_to_table(self.press_y, self.press_x, width)
+        self.table_manager.add_gaussian_to_table_signal.emit(self.press_y, self.press_x, width)
+        # Отрисовка гауссиан и кумулятивного графика
+        self.rebuild_gaussians_signal.emit()
 
     def on_press(self, event):
         """
@@ -94,10 +87,14 @@ class GraphHandler(QObject):
 
         Пересоздает график, учитывая актуальные данные из таблицы.
         """
-        self.plot_graph()  
+        self.plot_graph()
+        
+        if self.table_manager.data['gauss'].size == 0:
+            return        
+        
         ax = self.ui_initializer.figure1.get_axes()[0]
         cumfunc = np.zeros(1000)
-        for _, row in self.table_manager.data['gauss'].iterrows():
+        for _, row in self.table_manager.data['gauss'].iterrows():            
             x_column_data = self.table_manager.get_column_data(self.viewer.file_name, self.ui_initializer.combo_box_x.currentText()) 
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
             if row['type'] == 'gauss':

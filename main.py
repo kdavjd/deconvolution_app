@@ -84,7 +84,7 @@ class MainApp(QMainWindow):
             self.event_handler.ui_handler.disconnect_canvas_events()
 
     def options_mode(self):        
-        self.table_manager.fill_table('options')    
+        self.table_manager.fill_table_signal.emit('options')    
    
     def compute_peaks(self):
         
@@ -97,8 +97,6 @@ class MainApp(QMainWindow):
         y_column_name = self.ui_initializer.combo_box_y.currentText()
         
         def objective(coefficients): 
-            coefficients_str = ', '.join(map(str, np.round(coefficients,4)))
-            self.ui_initializer.console_widget.append(f'Получены коэффициенты: {coefficients_str}')
             best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
                 coefficients, x_column_name, y_column_name)
             return best_rmse
@@ -106,13 +104,11 @@ class MainApp(QMainWindow):
         if self.table_manager.data['gauss']['coeff_1'].size > 0:
             initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
             logger.debug(f'содержание initial_coefficients {initial_coefficients}')
-            # Ограничения для коэффициентов
-            constraints = [
-                {'type': 'ineq', 'fun': lambda x: -0.01 - x[0]},
-                {'type': 'ineq', 'fun': lambda x: x[0] + 4},
-                {'type': 'ineq', 'fun': lambda x: -0.01 - x[1]},
-                {'type': 'ineq', 'fun': lambda x: x[1] + 4},
-            ]
+            
+            constraints = []
+            for i in range(len(initial_coefficients)):
+                constraints.append({'type': 'ineq', 'fun': lambda x, i=i: -0.01 - x[i]})
+                constraints.append({'type': 'ineq', 'fun': lambda x, i=i: x[i] + 4})
 
             # Запускаем процесс оптимизации
             try:
