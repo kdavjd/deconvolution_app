@@ -3,9 +3,11 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from .graph_handler import GraphHandler
 import numpy as np
 import logging
+from time import sleep
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 class DataHandler(QObject):
     console_message_signal = pyqtSignal(str)
@@ -28,16 +30,23 @@ class DataHandler(QObject):
         self.console_message_signal.connect(self.ui_initializer.update_console)
         self.refresh_gui_signal.connect(self.ui_initializer.refresh_gui)
     
+    def wait_for_data(self):
+        while self.received_data is None:
+            sleep(0.1) # Ждем 100 мс и проверяем снова
+        return self.received_data
+    
     def store_received_data(self, data):
         self.received_data = data
         
     def add_diff_button_pushed(self, x_column_name: str, y_column_name: str):
         # Вычисление производной
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, x_column_name)
-        x_values = self.received_data      
+        x_values = self.wait_for_data()      
+        self.received_data = None        
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, y_column_name)
-        y_values = self.received_data
+        y_values = self.wait_for_data()
+        self.received_data = None
         
         dy_dx = self.math_operations.compute_derivative(x_values, y_values)
 
@@ -54,10 +63,11 @@ class DataHandler(QObject):
         # Установка нового столбца как текущего для Y в комбо-боксе
         self.ui_initializer.combo_box_y.setCurrentText(new_column_name)
 
-    def get_init_params(self):        
-        logger.debug("Начало метода get_init_params.")
+    def get_init_params(self): 
         self.table_manager.get_data_signal.emit('gauss')
-        gaussian_data = self.received_data    
+        gaussian_data = self.wait_for_data()
+        self.received_data = None
+        logger.debug(f"Полученные данные в get_init_params: \n {gaussian_data}")
         
         init_params = []
         for index, row in gaussian_data.iterrows():
@@ -70,7 +80,8 @@ class DataHandler(QObject):
     def update_gaussian_data(self, best_params, best_combination, coeff_1):        
         logger.debug("Начало метода update_gaussian_data.")
         self.table_manager.get_data_signal.emit('gauss')
-        gaussian_data = self.received_data
+        gaussian_data = self.wait_for_data()
+        self.received_data = None
         
         for i, peak_type in enumerate(best_combination):
             height = best_params[3 * i]
@@ -86,29 +97,38 @@ class DataHandler(QObject):
 
         return gaussian_data
     
-    def compute_peaks_button_pushed(self, coeff_1: list[float], x_column_name: str, y_column_name: str, best_rmse=None):
-        
+    def compute_peaks_button_pushed(
+        self, coeff_1: list[float], x_column_name: str, y_column_name: str, params: list, best_rmse=None):
+         
         coefficients_str = ', '.join(map(str, coeff_1))
-        self.console_message_signal.emit(f'Получены коэффициенты: {coefficients_str}')      
-
-        logger.info(f'Получены коэффициенты: {str(coeff_1)}')
-        init_params = self.get_init_params()
+        self.console_message_signal.emit(f'Получены коэффициенты: {coefficients_str}')
+           
+        logger.debug(f'Получены параметры:\n {params}')         
+        logger.debug(f'Получены коэффициенты:\n {str(coeff_1)}')        
+        logger.debug(f'x_column_name:\n {x_column_name}')  
+        logger.debug(f'self.received_data:\n {self.received_data}') 
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, x_column_name)
-        x_values = self.received_data      
+        x_values = self.wait_for_data()
+        logger.debug(f'x_values: {self.received_data}')
+        self.received_data = None  
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, y_column_name)
-        y_values = self.received_data
+        y_values = self.wait_for_data()
+        logger.debug(f'y_values: {self.received_data}')
+        self.received_data = None
         
         self.table_manager.get_data_signal.emit('options')
-        options_data = self.received_data
+        options_data = self.wait_for_data()
+        logger.debug(f'options_data: {options_data}')
+        self.received_data = None
         
         maxfev = int(options_data['maxfev'].values)
         
-        num_peaks = len(init_params) // 3
+        num_peaks = len(params) // 3
         if best_rmse is None:
             best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-                x_values, y_values, num_peaks, init_params, maxfev, coeff_1)  
+                x_values, y_values, num_peaks, params, maxfev, coeff_1)  
                 
         best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
         self.table_manager.update_table_signal.emit('gauss', best_gaussian_data)

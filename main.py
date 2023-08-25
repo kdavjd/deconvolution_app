@@ -22,18 +22,39 @@ logger.setLevel(logging.DEBUG)
 
 
 class ComputePeaksThread(QThread):
-    # Можно добавить сигналы для обратной связи с основным потоком
     progress_signal = pyqtSignal(float)
+    finished_signal = pyqtSignal(object) # Для передачи результата
 
-    def __init__(self, main_app):
+    def __init__(self, x_column_name, y_column_name, initial_coefficients, constraints, event_handler, table_manager, init_params):
         super().__init__()
-        self.main_app = main_app
+        self.x_column_name = x_column_name
+        self.y_column_name = y_column_name
+        self.initial_coefficients = initial_coefficients
+        self.constraints = constraints
         self.is_running = True
+        self.event_handler = event_handler
+        self.table_manager = table_manager
+        self.init_params = init_params
 
     def run(self):
-        # Ваш код для compute_peaks
-        # Используйте self.is_running в условии цикла или проверки, чтобы управлять выполнением
-        self.main_app.compute_peaks()
+        def objective(coefficients):
+            if not self.is_running:
+                raise Exception("Остановка оптимизации по требованию пользователя")
+            best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
+                coefficients, self.x_column_name, self.y_column_name, self.init_params)
+            return best_rmse
+
+        def callback(x):
+            if not self.is_running:
+                raise Exception("Остановка оптимизации по требованию пользователя")
+
+        try:
+            result = minimize(objective, self.initial_coefficients, constraints=self.constraints, method='SLSQP', callback=callback)
+            if self.is_running:
+                self.finished_signal.emit(result) # Передача результата
+        except Exception as e:
+            logger.warning(str(e))
+            self.finished_signal.emit(None) # Передача None, если есть ошибка
 
     def stop(self):
         self.is_running = False
@@ -87,45 +108,46 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table_signal.emit('options')    
    
     def compute_peaks(self):
-        
-        def callback(x):
-            if self.stop_optimization:
-                raise Exception("Остановка оптимизации по требованию пользователя")
-            
-        # Внутренняя функция для определения целевой функции
-        x_column_name = self.ui_initializer.combo_box_x.currentText() 
+        x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
-        
-        def objective(coefficients): 
-            best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
-                coefficients, x_column_name, y_column_name)
-            return best_rmse
 
         if self.table_manager.data['gauss']['coeff_1'].size > 0:
             initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
             logger.debug(f'содержание initial_coefficients {initial_coefficients}')
-            
+
             constraints = []
             for i in range(len(initial_coefficients)):
                 constraints.append({'type': 'ineq', 'fun': lambda x, i=i: -0.01 - x[i]})
                 constraints.append({'type': 'ineq', 'fun': lambda x, i=i: x[i] + 4})
 
-            # Запускаем процесс оптимизации
-            try:
-                result = minimize(objective, initial_coefficients, constraints=constraints, method='SLSQP', callback=callback)
-            except Exception as e:                
-                logger.warning(str(e))
-                return
-            
-            # Лучшие значения коэффициентов
-            best_coefficients = result.x
+            # Создание экземпляра потока
+            init_params = self.event_handler.data_handler.get_init_params()
+            self.compute_peaks_thread = ComputePeaksThread(
+                x_column_name, y_column_name, initial_coefficients, constraints, 
+                self.event_handler, self.table_manager, init_params)
 
+            # Соединение сигналов с нужными слотами
+            self.compute_peaks_thread.finished_signal.connect(self.on_peaks_computed)
+            self.compute_peaks_thread.progress_signal.connect(self.on_progress_update)  # Если нужно обновление прогресса
+
+            # Запуск потока
+            self.compute_peaks_thread.start()
+
+    def on_peaks_computed(self, result):
+        if result:
+            best_coefficients = result.x
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
             self.event_handler.data_handler.compute_peaks_button_pushed(
-                best_coefficients, x_column_name, y_column_name)
-            
+                best_coefficients, self.ui_initializer.combo_box_x.currentText(), self.ui_initializer.combo_box_y.currentText())
+        else:
+            logger.warning('Ошибка при вычислении пиков')
+
+    def on_progress_update(self, progress):
+        # Здесь можно обновить индикатор прогресса или другие элементы UI
+        pass
+
     def stop_computing_peaks(self):
-        self.stop_optimization = True
+        self.compute_peaks_thread.stop()  # Останавливаем поток, если он запущен
         
     def add_diff(self):
         x_column_name = self.ui_initializer.combo_box_x.currentText() 

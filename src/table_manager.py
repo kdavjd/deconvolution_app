@@ -5,8 +5,9 @@ import pandas as pd
 from src.pandas_model import PandasModel
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 class TableManager(QObject):
     get_data_signal = pyqtSignal(str)
@@ -65,6 +66,8 @@ class TableManager(QObject):
         if table_name not in self.table_names:
             raise ValueError(f"Unknown table name: {table_name}")
         self.get_data_returned_signal.emit(self.data[table_name])
+        data = self.data[table_name]
+        logger.debug(f'Переданы данные: \n {data}')
         return self.data[table_name]
     
     @pyqtSlot(str, pd.DataFrame)
@@ -137,7 +140,7 @@ class TableManager(QObject):
 
     @pyqtSlot(str, str)
     def get_column_data(self, table_name, column_name):
-        logger.info(f'get_column_data table_name: {table_name} column_name: {column_name}')
+        logger.debug(f'get_column_data table_name: {table_name} column_name: {column_name}')
         if table_name not in self.table_names:
             raise ValueError(f"Unknown table name: {table_name}")
 
