@@ -2,17 +2,15 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import numpy as np
 from scipy.optimize import curve_fit
 from itertools import product
-import logging
 import threading
 from typing import Tuple
+from src.logger_config import logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class ComputeCombinationThread(QThread):
     
-    def __init__(self, x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock):
+    def __init__(self, x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock, console_message_signal):
         super().__init__()
         self.x_values = x_values
         self.y_values = y_values
@@ -24,6 +22,7 @@ class ComputeCombinationThread(QThread):
         self.results_dict = results_dict
         self.lock = lock
         self.result = None
+        self.console_message_signal = console_message_signal
 
     def run(self):
         try:
@@ -39,15 +38,17 @@ class ComputeCombinationThread(QThread):
             
             with self.lock:
                 if self.result:
-                    logger.debug(f"Подготовка результата для комбинации {self.combination}: {self.result}")
+                    logger.info(f"Комбинация: {self.combination}\n RMSE: {np.round(rmse, 4)}")
+                    self.console_message_signal.emit(f"Комбинация: {self.combination}\n RMSE: {np.round(rmse, 4)}")
                     self.results_dict[self.combination] = {'popt': self.result[1], 'rmse': self.result[2]}
                 else:
-                    logger.warning(f"Результат не найден для комбинации {self.combination}")
-                logger.debug(f"Поток для комбинации {self.combination} завершился успешно.")
+                    logger.warning(f"Результат не найден для комбинации:\n {self.combination}")
+                logger.debug(f"Поток для комбинации: {self.combination} завершился успешно.")
+                
         except RuntimeError:
-            logger.exception(f"Не удалось подобрать комбинацию: {self.combination}")
+            logger.exception(f"Не удалось подобрать комбинацию:\n {self.combination}")
         except Exception as e:
-            logger.exception(f"Неожиданное исключение в потоке для комбинации {self.combination}: {str(e)}")
+            logger.exception(f"Неожиданное исключение в потоке для комбинации:\n {self.combination}: {str(e)}")
          
 
 class MathOperations:
@@ -95,11 +96,12 @@ class MathOperations:
     @staticmethod
     def compute_best_peaks(
         x_values: np.array, y_values: np.array, num_peaks: int, 
-        initial_params: list, maxfev: int, coeff_1: list
+        initial_params: list, maxfev: int, coeff_1: list, 
+        console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
         
-        logger.debug("Начало вычисления лучших пиков.")
-        logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
+        logger.info("\nНачало деконволюции пиков.\n")
+        logger.debug(f"Полученные начальные параметры:\n\n {str(initial_params)}, \n\nкол-во пиков: {num_peaks}")
         
         peak_types = ['gauss', 'fraser']
         combinations = list(product(peak_types, repeat=num_peaks))
@@ -119,7 +121,8 @@ class MathOperations:
         
         for combination in combinations:
             thread = ComputeCombinationThread(
-                x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock)
+                x_values, y_values, combination, initial_params, 
+                maxfev, bounds, coeff_1, results_dict, lock, console_message_signal)
             thread.start()
             threads.append(thread)
         
@@ -136,7 +139,7 @@ class MathOperations:
         best_popt = results_dict[best_combination]['popt']
         best_rmse = results_dict[best_combination]['rmse']
 
-        logger.info(f"Лучшая комбинация: {best_combination} с RMSE: {best_rmse}")
+        logger.info(f"Лучшая комбинация:\n {best_combination}\n с RMSE: {np.round(best_rmse, 4)}")
         logger.debug("Конец метода compute_best_peaks.")
         
         return best_popt, best_combination, best_rmse

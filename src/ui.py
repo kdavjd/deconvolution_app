@@ -4,11 +4,9 @@ from PyQt5.QtGui import QTextCursor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtCore import pyqtSlot
-
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class UIInitializer(QWidget):
@@ -59,7 +57,7 @@ class UIInitializer(QWidget):
         console_widget = QTextEdit()
         console_widget.setReadOnly(True)
         handler = QTextEditLogger(console_widget)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - : %(message)s', datefmt='%H:%M:%S')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return console_widget

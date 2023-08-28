@@ -2,11 +2,16 @@ import logging
 
 def configure_logger():
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Измените эту строку для нового формата
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - : %(message)s', datefmt='%H:%M:%S')
+    
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
     return logger
+
+logger = configure_logger()

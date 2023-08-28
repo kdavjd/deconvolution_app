@@ -2,10 +2,7 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, QInputDialog, QTableWidgetI
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QObject, pyqtSignal
 import numpy as np
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from src.logger_config import logger
 
 class GraphHandler(QObject):
     # Определение сигналов для каждого метода
@@ -103,7 +100,7 @@ class GraphHandler(QObject):
                 y = self.math_operations.fraser_suzuki(
                     x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_1']))
                 _coef = str(row['coeff_1'])
-                logger.info(f'В rebuild_gaussians коэффициент = {_coef}')
+                logger.debug(f'В rebuild_gaussians коэффициент = {_coef}')
             ax.plot(x, y,)
             cumfunc += y
         ax.plot(x, cumfunc,)

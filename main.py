@@ -1,24 +1,26 @@
 import sys
+from io import StringIO
+
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
 from src.csv_viewer import CSVViewer
 from src.pandas_model import PandasModel
 from src.table_manager import TableManager
-import numpy as np
-import pandas as pd
 from src.math_operations import MathOperations
 from src.ui import UIInitializer
 from src.event_handler import EventHandler
-import logging
+
+import numpy as np
+import pandas as pd
 from scipy.optimize import minimize
 
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
 import scienceplots
-plt.style.use(['science', 'no-latex', 'notebook', 'grid'])
+plt.style.use(['science', 'no-latex', 'nature', 'grid'])
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from src.logger_config import logger
 
 
 class ComputePeaksThread(QThread):
@@ -97,6 +99,11 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table(self.viewer.file_name)
         box_list = [self.ui_initializer.combo_box_x, self.ui_initializer.combo_box_y]
         self.table_manager.fill_combo_boxes(self.viewer.file_name, box_list, True)
+        # Сохранение информации DataFrame в строке
+        buffer = StringIO()
+        self.viewer.df.info(buf=buffer)
+        file_info = buffer.getvalue()
+        self.event_handler.data_handler.console_message_signal.emit(f'Загружен CSV файл:\n {file_info}')
     
     def switch_to_interactive_mode(self, activated):
         if activated:
@@ -137,8 +144,8 @@ class MainApp(QMainWindow):
         if result:
             best_coefficients = result.x
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
-            self.event_handler.data_handler.compute_peaks_button_pushed(
-                best_coefficients, self.ui_initializer.combo_box_x.currentText(), self.ui_initializer.combo_box_y.currentText())
+            self.event_handler.data_handler.console_message_signal.emit(
+                f'Оптимизация завершена, лучшие параметры:\n {best_coefficients}')
         else:
             logger.warning('Ошибка при вычислении пиков')
 

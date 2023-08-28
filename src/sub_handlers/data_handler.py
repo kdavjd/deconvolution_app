@@ -5,9 +5,7 @@ import numpy as np
 import logging
 from time import sleep
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+from src.logger_config import logger
 
 class DataHandler(QObject):
     console_message_signal = pyqtSignal(str)
@@ -99,14 +97,14 @@ class DataHandler(QObject):
     
     def compute_peaks_button_pushed(
         self, coeff_1: list[float], x_column_name: str, y_column_name: str, params: list, best_rmse=None):
-         
-        coefficients_str = ', '.join(map(str, coeff_1))
-        self.console_message_signal.emit(f'Получены коэффициенты: {coefficients_str}')
            
-        logger.debug(f'Получены параметры:\n {params}')         
-        logger.debug(f'Получены коэффициенты:\n {str(coeff_1)}')        
+        logger.debug(f'Получены параметры:\n {params}')
         logger.debug(f'x_column_name:\n {x_column_name}')  
-        logger.debug(f'self.received_data:\n {self.received_data}') 
+        logger.debug(f'self.received_data:\n {self.received_data}')
+        
+        # Округление коэффициентов до 4-го знака и отправка их в логи
+        rounded_coeff_1 = [round(coeff, 4) for coeff in coeff_1]
+        logger.debug(f'Получены коэффициенты:\n\n {str(rounded_coeff_1)}\n')  
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, x_column_name)
         x_values = self.wait_for_data()
@@ -128,13 +126,13 @@ class DataHandler(QObject):
         num_peaks = len(params) // 3
         if best_rmse is None:
             best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-                x_values, y_values, num_peaks, params, maxfev, coeff_1)  
+                x_values, y_values, num_peaks, params, maxfev, coeff_1, self.console_message_signal)  
                 
         best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
         self.table_manager.update_table_signal.emit('gauss', best_gaussian_data)
             
-        self.console_message_signal.emit(f'Лучшее RMSE: {best_rmse:.5f}')
-        self.console_message_signal.emit(f'Лучшая комбинация пиков: {best_combination}')
+        self.console_message_signal.emit(f'\nЛучшее RMSE: {best_rmse:.5f}\n')
+        self.console_message_signal.emit(f'Лучшая комбинация пиков:\n {best_combination}\n\n')
         
         self.refresh_gui_signal.emit()
             

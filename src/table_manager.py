@@ -1,13 +1,11 @@
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QTableView, QStackedWidget
 from PyQt5.QtCore import Qt, QObject, pyqtSlot
+
 import pandas as pd
 from src.pandas_model import PandasModel
-import logging
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+from src.logger_config import logger
 
 class TableManager(QObject):
     get_data_signal = pyqtSignal(str)

@@ -5,10 +5,6 @@ from src.sub_handlers.graph_handler import GraphHandler
 from src.sub_handlers.data_handler import DataHandler
 from src.sub_handlers.ui_handler import UIHandler
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class EventHandler(QObject):
     update_console_signal = pyqtSignal(str)
