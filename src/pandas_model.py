@@ -101,6 +101,29 @@ class PandasModel(QAbstractTableModel):
             self.dataChanged.emit(index, index)
             return True
         return False
+    
+    def setData(self, index, value, role=Qt.EditRole):
+        """
+        Изменяет данные в DataFrame.
+
+        Args:
+            index (QModelIndex): индекс ячейки.
+            value (QVariant): новое значение.
+            role (Qt.ItemDataRole, optional): роль данных.
+
+        Returns:
+            bool: True, если данные успешно изменены, иначе False.
+        """
+        row = index.row()
+        col = index.column()
+
+        if role == Qt.EditRole:
+            value = str(value).replace(',', '.')
+            self._data.iat[row, col] = value
+            self.dataChanged.emit(index, index)
+            self.data_changed_signal.emit()  # Ваши собственные сигналы могут быть здесь
+            return True
+        return False
 
     def flags(self, index):
         """

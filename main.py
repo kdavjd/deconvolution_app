@@ -1,5 +1,6 @@
 import sys
 from io import StringIO
+import logging
 
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -56,6 +57,8 @@ class ComputePeaksThread(QThread):
                 self.finished_signal.emit(result) # Передача результата
         except Exception as e:
             logger.warning(str(e))
+            self.event_handler.data_handler.console_message_signal.emit(
+                f'\nОстановка оптимизации по требованию пользователя.\n')
             self.finished_signal.emit(None) # Передача None, если есть ошибка
 
     def stop(self):
@@ -63,10 +66,14 @@ class ComputePeaksThread(QThread):
         
 class MainApp(QMainWindow):
     """Главное приложение."""
-    functions_data = pd.DataFrame(columns=['reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
-    options_data = pd.DataFrame({'maxfev': [1000], 'coeff_1': [-1], 'rmse':[0.0]})
-    table_dict = {'gauss':functions_data,
-                  'options':options_data}
+    functions_data = pd.DataFrame(columns=[
+        'reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
+    
+    options_data = pd.DataFrame({
+        'maxfev': [1000], 'coeff_1': [-0.01], 'rmse':[0.0],'bottom_constraint':[-4], 'top_constraint':[-0.01]})
+    
+    table_dict = {
+        'gauss':functions_data,'options':options_data}
     
     def __init__(self):
         """Инициализация класса."""
@@ -104,6 +111,8 @@ class MainApp(QMainWindow):
         self.viewer.df.info(buf=buffer)
         file_info = buffer.getvalue()
         self.event_handler.data_handler.console_message_signal.emit(f'Загружен CSV файл:\n {file_info}')
+        file_handler = logging.FileHandler(f'{self.viewer.file_name}.log')
+        logger.addHandler(file_handler)
     
     def switch_to_interactive_mode(self, activated):
         if activated:
@@ -115,18 +124,32 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table_signal.emit('options')    
    
     def compute_peaks(self):
+        self.event_handler.data_handler.console_message_signal.emit(
+                f'\nОптимизация параметров начата.\n')
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
 
         if self.table_manager.data['gauss']['coeff_1'].size > 0:
             initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
+            
             logger.debug(f'содержание initial_coefficients {initial_coefficients}')
-
+            _ = self.table_manager.data['options']['bottom_constraint'].iloc[0]
+            logger.debug(f'bottom_constraint:  {_}')
+            _ = self.table_manager.data['options']['top_constraint'].iloc[0]
+            logger.debug(f'top_constraint:  {_}')
+            
             constraints = []
             for i in range(len(initial_coefficients)):
-                constraints.append({'type': 'ineq', 'fun': lambda x, i=i: -0.01 - x[i]})
-                constraints.append({'type': 'ineq', 'fun': lambda x, i=i: x[i] + 4})
-
+                constraints.append({
+                    'type': 'ineq', 
+                    'fun': lambda x, i=i: x[i] - float(self.table_manager.data['options']['bottom_constraint'].iloc[0])
+                })                
+                
+                constraints.append({
+                    'type': 'ineq', 
+                    'fun': lambda x, i=i: float(self.table_manager.data['options']['top_constraint'].iloc[0]) - x[i]
+                })                
+                
             # Создание экземпляра потока
             init_params = self.event_handler.data_handler.get_init_params()
             self.compute_peaks_thread = ComputePeaksThread(
@@ -145,7 +168,7 @@ class MainApp(QMainWindow):
             best_coefficients = result.x
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
             self.event_handler.data_handler.console_message_signal.emit(
-                f'Оптимизация завершена, лучшие параметры:\n {best_coefficients}')
+                f'Оптимизация завершена. Лучшие параметры:\n {best_coefficients}')
         else:
             logger.warning('Ошибка при вычислении пиков')
 
@@ -154,6 +177,8 @@ class MainApp(QMainWindow):
         pass
 
     def stop_computing_peaks(self):
+        self.event_handler.data_handler.console_message_signal.emit(
+                f'\nОстановка вычислений. Дождитесь завершения потоков.\n')
         self.compute_peaks_thread.stop()  # Останавливаем поток, если он запущен
         
     def add_diff(self):

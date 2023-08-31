@@ -61,14 +61,18 @@ class UIHandler(QObject):
         # Если нажата клавиша Alt, удаляем столбец.
         elif QApplication.keyboardModifiers() == Qt.AltModifier:
             self.table_manager.delete_column(q_model_index.column())
+        # Если нажата клавиша Shift, показываем диалоговое окно для редактирования.
+        elif QApplication.keyboardModifiers() == Qt.ShiftModifier:
+            # current_value = model.data(q_model_index, Qt.DisplayRole)
+            # new_value, ok = QInputDialog.getText(None, "Изменить значение", "Введите новое значение:", QLineEdit.Normal, current_value)
+            # new_value = new_value.replace(',', '.')
+            #if ok and new_value != current_value:
+            
+            self.graph_handler.rebuild_gaussians_signal.emit()                
+            self.main_app.event_handler.data_handler.console_message_signal.emit(
+                f'\nДанные применены.')
         else:
-            # Получение текущего значения из модели
-            current_value = model.data(q_model_index, Qt.DisplayRole)
-            # Показываем диалоговое окно для изменения значения.
-            new_value, ok = QInputDialog.getText(None, "Изменить значение", "Введите новое значение:", QLineEdit.Normal, current_value)
-            # Если пользователь подтвердил изменение и новое значение отличается от старого, обновляем значение в модели.
-            if ok and new_value != current_value:
-                model.set_data(q_model_index, new_value, Qt.EditRole)
+            pass
 
     def connect_canvas_events(self):
         """

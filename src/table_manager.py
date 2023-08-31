@@ -1,3 +1,4 @@
+from time import sleep
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QTableView, QStackedWidget
 from PyQt5.QtCore import Qt, QObject, pyqtSlot
@@ -33,8 +34,7 @@ class TableManager(QObject):
         self.delete_row_signal.connect(self.delete_row)
         self.delete_column_signal.connect(self.delete_column)
         self.fill_combo_boxes_signal.connect(self.fill_combo_boxes)
-        self.get_column_data_signal.connect(self.get_column_data)
-        
+        self.get_column_data_signal.connect(self.get_column_data) 
         self.add_reaction_cumulative_func_signal.connect(self.add_reaction_cumulative_func)
         self.add_gaussian_to_table_signal.connect(self.add_gaussian_to_table)
 
@@ -58,7 +58,8 @@ class TableManager(QObject):
             self.table_indexes[name] = self.stacked_widget.count() - 1  
         
         logger.info(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
-    
+      
+        
     @pyqtSlot(str)
     def get_data(self, table_name):
         if table_name not in self.table_names:
@@ -151,17 +152,20 @@ class TableManager(QObject):
             raise ValueError(f"Column {column_name} in table {table_name} contains non-numeric data")
 
     @pyqtSlot(object, tuple, object, str, object)
-    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func):
+    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func):        
+        _coeff = self.data['gauss']['coeff_1']
+        logger.info(f'add_reaction_cumulative_func _coeff: {_coeff.values}') 
+        
         for i, peak_type in enumerate(best_combination):
             a0 = best_params[3 * i]
             a1 = best_params[3 * i + 1]
             a2 = best_params[3 * i + 2]
-
+            
             new_column_name = y_column + '_reaction_' + str(i)
             if peak_type == 'gauss':
                 peak_func = self.math_operations.gaussian(x_values, a0, a1, a2)
             else:
-                peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, -1)
+                peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, _coeff.values[i])
             self.data[self.viewer.file_name][new_column_name] = peak_func
             cumulative_func += peak_func
 
@@ -175,7 +179,7 @@ class TableManager(QObject):
                                  'height': [height],
                                  'center': [center],
                                  'width': [width],
-                                 'type':['gauss'],
+                                 'type':['frazer'],
                                  'coeff_1': [float(self.data['options']['coeff_1'].values)]
                                  })
         self.data['gauss'] = pd.concat([self.gaus, row_data], ignore_index=True)

@@ -38,7 +38,7 @@ class ComputeCombinationThread(QThread):
             
             with self.lock:
                 if self.result:
-                    logger.info(f"Комбинация: {self.combination}\n RMSE: {np.round(rmse, 4)}")
+                    logger.info(f"Комбинация: {self.combination} RMSE: {np.round(rmse, 5)}")
                     self.console_message_signal.emit(f"Комбинация: {self.combination}\n RMSE: {np.round(rmse, 4)}")
                     self.results_dict[self.combination] = {'popt': self.result[1], 'rmse': self.result[2]}
                 else:
@@ -63,10 +63,10 @@ class MathOperations:
             logger.warning(f"Получен пустой результат в handle_thread_finished")    
 
     @staticmethod
-    def gaussian(x: np.ndarray, a0: float, a1: float, a2: float) -> np.ndarray:
+    def gaussian(x: np.ndarray, h: float, z: float, w: float) -> np.ndarray:
         """Гауссовская функция."""
-        a0, a1, a2 = max(0, float(a0)), float(a1), float(a2)
-        return a0 * np.exp(-((x - a1) ** 2) / (2 * a2 ** 2))
+        h, z, w = max(0, float(h)), float(z), float(w)
+        return h * np.exp(-((x - z) ** 2) / (2 * w ** 2))
 
     @staticmethod
     def compute_derivative(x_values: np.ndarray, y_values: np.ndarray) -> np.ndarray:
@@ -74,9 +74,9 @@ class MathOperations:
         return dy_dx
 
     @staticmethod
-    def fraser_suzuki(x: np.array, a0: float, a1: float, a2: float, a3: float) -> np.array:
+    def fraser_suzuki(x: np.array, h: float, z: float, w: float, a3: float) -> np.array:
         with np.errstate(divide='ignore', invalid='ignore'):
-            result = a0 * np.exp(-np.log(2)*((np.log(1+2*a3*((x-a1)/a2))/a3)**2))
+            result = h * np.exp(-np.log(2)*((np.log(1+2*a3*((x-z)/w))/a3)**2))
         result = np.nan_to_num(result, nan=0)
         return result
 
@@ -84,13 +84,13 @@ class MathOperations:
     def peaks(x: np.array, peak_types: list, coeff_1: list, *params: float) -> np.array:
         y = np.zeros_like(x)
         for i, peak_type in enumerate(peak_types):
-            a0 = params[3*i]
-            a1 = params[3*i+1]
-            a2 = params[3*i+2]
+            h = params[3*i]
+            z = params[3*i+1]
+            w = params[3*i+2]
             if peak_type == 'gauss':
-                y = y + MathOperations.gaussian(x, a0, a1, a2)
+                y = y + MathOperations.gaussian(x, h, z, w)
             else: 
-                y = y + MathOperations.fraser_suzuki(x, a0, a1, a2, coeff_1[i]) 
+                y = y + MathOperations.fraser_suzuki(x, h, z, w, coeff_1[i]) 
         return y
 
     @staticmethod
@@ -100,8 +100,8 @@ class MathOperations:
         console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
         
-        logger.info("\nНачало деконволюции пиков.\n")
-        logger.debug(f"Полученные начальные параметры:\n\n {str(initial_params)}, \n\nкол-во пиков: {num_peaks}")
+        logger.info("Начало деконволюции пиков.")
+        logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
         
         peak_types = ['gauss', 'fraser']
         combinations = list(product(peak_types, repeat=num_peaks))
@@ -139,7 +139,7 @@ class MathOperations:
         best_popt = results_dict[best_combination]['popt']
         best_rmse = results_dict[best_combination]['rmse']
 
-        logger.info(f"Лучшая комбинация:\n {best_combination}\n с RMSE: {np.round(best_rmse, 4)}")
+        logger.info(f"Лучшая комбинация: {best_combination} RMSE: {np.round(best_rmse, 4)}")
         logger.debug("Конец метода compute_best_peaks.")
         
         return best_popt, best_combination, best_rmse

@@ -98,13 +98,13 @@ class DataHandler(QObject):
     def compute_peaks_button_pushed(
         self, coeff_1: list[float], x_column_name: str, y_column_name: str, params: list, best_rmse=None):
            
-        logger.debug(f'Получены параметры:\n {params}')
+        logger.info(f'Получены параметры: {params}')
         logger.debug(f'x_column_name:\n {x_column_name}')  
         logger.debug(f'self.received_data:\n {self.received_data}')
         
-        # Округление коэффициентов до 4-го знака и отправка их в логи
-        rounded_coeff_1 = [round(coeff, 4) for coeff in coeff_1]
-        logger.debug(f'Получены коэффициенты:\n\n {str(rounded_coeff_1)}\n')  
+        # Округление коэффициентов до 5-го знака и отправка их в логи
+        rounded_coeff_1 = [round(coeff, 5) for coeff in coeff_1]
+        logger.info(f'Получены коэффициенты: {str(rounded_coeff_1)}\n')  
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, x_column_name)
         x_values = self.wait_for_data()
@@ -131,8 +131,8 @@ class DataHandler(QObject):
         best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
         self.table_manager.update_table_signal.emit('gauss', best_gaussian_data)
             
-        self.console_message_signal.emit(f'\nЛучшее RMSE: {best_rmse:.5f}\n')
-        self.console_message_signal.emit(f'Лучшая комбинация пиков:\n {best_combination}\n\n')
+        self.console_message_signal.emit(f'Лучшее RMSE: {best_rmse:.5f}\n')
+        self.console_message_signal.emit(f'Лучшая комбинация пиков: {best_combination}\n\n')
         
         self.refresh_gui_signal.emit()
             
