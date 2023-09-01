@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject, pyqtSignal
 from .graph_handler import GraphHandler
+from itertools import product
 import numpy as np
 import logging
 from time import sleep
+from functools import partial
 
 from src.logger_config import logger
 
@@ -75,7 +77,7 @@ class DataHandler(QObject):
         logger.debug(f"Конец метода get_init_params. Полученные параметры: {str(init_params)}.")
         return init_params
     
-    def update_gaussian_data(self, best_params, best_combination, coeff_1):        
+    def update_gaussian_data(self, best_params, best_combination, coeff_a, s1, s2):        
         logger.debug("Начало метода update_gaussian_data.")
         self.table_manager.get_data_signal.emit('gauss')
         gaussian_data = self.wait_for_data()
@@ -85,26 +87,35 @@ class DataHandler(QObject):
             height = best_params[3 * i]
             center = best_params[3 * i + 1]
             width = best_params[3 * i + 2]
-            coeff_ = coeff_1[i]
+            coeff_ = coeff_a[i]
+            coeff_s1 = s1[i]
+            coeff_s2 = s2[i]
 
             gaussian_data.at[i, 'height'] = height
             gaussian_data.at[i, 'center'] = center
             gaussian_data.at[i, 'width'] = width
             gaussian_data.at[i, 'type'] = peak_type
-            gaussian_data.at[i, 'coeff_1'] = coeff_
+            gaussian_data.at[i, 'coeff_a'] = coeff_
+            gaussian_data.at[i, 'coeff_s1'] = coeff_s1
+            gaussian_data.at[i, 'coeff_s2'] = coeff_s2
 
         return gaussian_data
     
     def compute_peaks_button_pushed(
-        self, coeff_1: list[float], x_column_name: str, y_column_name: str, params: list, best_rmse=None):
-           
+        self, coefficients: list[float], x_column_name: str, y_column_name: str, params: list, best_rmse=None):
+        
+        n = len(coefficients) // 3  # Делим длину массива на общее число коэффициентов
+        coeff_a = coefficients[:n]  # Первая треть массива
+        s1 = coefficients[n:2*n]  # Вторая треть массива
+        s2 = coefficients[2*n:]  # Оставшаяся часть
+        
         logger.info(f'Получены параметры: {params}')
         logger.debug(f'x_column_name:\n {x_column_name}')  
         logger.debug(f'self.received_data:\n {self.received_data}')
         
         # Округление коэффициентов до 5-го знака и отправка их в логи
-        rounded_coeff_1 = [round(coeff, 5) for coeff in coeff_1]
-        logger.info(f'Получены коэффициенты: {str(rounded_coeff_1)}\n')  
+        rounded_coeff_a = [round(coeff, 5) for coeff in coeff_a]
+        logger.info(f'Получены коэффициенты: {str(rounded_coeff_a)}\n')  
         
         self.table_manager.get_column_data_signal.emit(self.viewer.file_name, x_column_name)
         x_values = self.wait_for_data()
@@ -122,13 +133,38 @@ class DataHandler(QObject):
         self.received_data = None
         
         maxfev = int(options_data['maxfev'].values)
+        peak_types = ['gauss', 'fraser', 'ads']
+        combinations = list(product(peak_types, repeat=n))
         
-        num_peaks = len(params) // 3
+        def calculate_bounds(initial_params):
+            lower_bounds = []
+            upper_bounds = []
+
+            # Деление initial_params на участки по 3 элемента
+            for i in range(0, len(initial_params), 3):
+                group = initial_params[i:i+3]
+
+                # Для первого элемента группы: от 0 до +50%
+                lower_bounds.append(group[0] * 0)
+                upper_bounds.append(group[0] * 1.5)
+                
+                # Для второго элемента группы: от -20% до +20%
+                lower_bounds.append(group[1] * 0.80)
+                upper_bounds.append(group[1] * 1.20)
+
+                # Для третьего элемента группы: от -40% до +40%
+                lower_bounds.append(group[2] * 0.6)
+                upper_bounds.append(group[2] * 1.4)
+
+            return (lower_bounds, upper_bounds)
+
+        bounds = calculate_bounds(params)
+       
         if best_rmse is None:
             best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
-                x_values, y_values, num_peaks, params, maxfev, coeff_1, self.console_message_signal)  
+                x_values, y_values, n, params, maxfev, coeff_a, s1, s2, combinations, bounds, self.console_message_signal)  
                 
-        best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_1)
+        best_gaussian_data = self.update_gaussian_data(best_params, best_combination, coeff_a, s1, s2)
         self.table_manager.update_table_signal.emit('gauss', best_gaussian_data)
             
         self.console_message_signal.emit(f'Лучшее RMSE: {best_rmse:.5f}\n')
@@ -137,7 +173,8 @@ class DataHandler(QObject):
         self.refresh_gui_signal.emit()
             
         cumulative_func = np.zeros(len(x_values)) 
-        self.table_manager.add_reaction_cumulative_func_signal.emit(best_params, best_combination, x_values, y_column_name, cumulative_func)
+        self.table_manager.add_reaction_cumulative_func_signal.emit(
+            best_params, best_combination, x_values, y_column_name, cumulative_func, coefficients)
             
         options_data['rmse'] = best_rmse
         self.table_manager.update_table_signal.emit('options', options_data)
@@ -146,6 +183,41 @@ class DataHandler(QObject):
             
         self.table_manager.fill_table_signal.emit('gauss')
             
-        return best_rmse
+        return best_rmse    
+    
+    def get_coeffs_and_bounds(self):
+         
+        # Получаем коэффициенты и их ограничения из данных
+        coeffs_dict = {
+            'a': self.table_manager.data['gauss']['coeff_a'].values,
+            's1': self.table_manager.data['gauss']['coeff_s1'].values,
+            's2': self.table_manager.data['gauss']['coeff_s2'].values
+        }
+
+        bounds_dict = {
+            'a': (
+                float(self.table_manager.data['options']['a_bottom_constraint'].iloc[0]),
+                float(self.table_manager.data['options']['a_top_constraint'].iloc[0])
+            ),
+            's1': (
+                float(self.table_manager.data['options']['s1_bottom_constraint'].iloc[0]),
+                float(self.table_manager.data['options']['s1_top_constraint'].iloc[0])
+            ),
+            's2': (
+                float(self.table_manager.data['options']['s2_bottom_constraint'].iloc[0]),
+                float(self.table_manager.data['options']['s2_top_constraint'].iloc[0])
+            )
+        }
+        
+        current_coeffs = np.array([])
+        bounds = []
+        for coeff_type, coeffs in coeffs_dict.items():
+            current_coeffs = np.concatenate([current_coeffs, coeffs])
+            bottom, top = bounds_dict[coeff_type]
+            for i in range(len(coeffs)):
+                bounds.append((bottom, top))
+
+        return current_coeffs, bounds
+
     
     

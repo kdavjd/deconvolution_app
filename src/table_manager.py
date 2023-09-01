@@ -20,7 +20,7 @@ class TableManager(QObject):
     fill_combo_boxes_signal = pyqtSignal(str, list, bool)
     get_column_data_signal = pyqtSignal(str, str)
     column_data_returned_signal = pyqtSignal(object)
-    add_reaction_cumulative_func_signal = pyqtSignal(object, tuple, object, str, object)
+    add_reaction_cumulative_func_signal = pyqtSignal(object, tuple, object, str, object, object)
     add_gaussian_to_table_signal = pyqtSignal(float, float, float)
 
     def __init__(self, viewer, math_operations, table_names, table_dict):
@@ -151,10 +151,13 @@ class TableManager(QObject):
         else:
             raise ValueError(f"Column {column_name} in table {table_name} contains non-numeric data")
 
-    @pyqtSlot(object, tuple, object, str, object)
-    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func):        
-        _coeff = self.data['gauss']['coeff_1']
-        logger.info(f'add_reaction_cumulative_func _coeff: {_coeff.values}') 
+    @pyqtSlot(object, tuple, object, str, object, object)
+    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func, coefficients):        
+        logger.info(f'add_reaction_cumulative_func _coeff: {coefficients}')
+        n = len(coefficients) // 3  # Делим длину массива на общее число коэффициентов
+        coeff_a = coefficients[:n]  # Первая треть массива
+        coeff_s1 = coefficients[n:2*n]  # Вторая треть массива
+        coeff_s2 = coefficients[2*n:]  # Оставшаяся часть
         
         for i, peak_type in enumerate(best_combination):
             a0 = best_params[3 * i]
@@ -162,15 +165,22 @@ class TableManager(QObject):
             a2 = best_params[3 * i + 2]
             
             new_column_name = y_column + '_reaction_' + str(i)
+            
             if peak_type == 'gauss':
                 peak_func = self.math_operations.gaussian(x_values, a0, a1, a2)
-            else:
-                peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, _coeff.values[i])
+            elif peak_type == 'fraser':
+                peak_func = self.math_operations.fraser_suzuki(x_values, a0, a1, a2, coeff_a[i])
+            elif peak_type == 'ads': 
+                s1 = coeff_s1[i]
+                s2 = coeff_s2[i]
+                peak_func = self.math_operations.asymmetric_double_sigmoid(x_values, a0, a1, a2, s1, s2)
+            
             self.data[self.viewer.file_name][new_column_name] = peak_func
             cumulative_func += peak_func
 
         new_column_name = y_column + '_cumulative'
         self.data[self.viewer.file_name][new_column_name] = cumulative_func
+
     
     @pyqtSlot(float, float, float)
     def add_gaussian_to_table(self, height, center, width):        
@@ -180,7 +190,9 @@ class TableManager(QObject):
                                  'center': [center],
                                  'width': [width],
                                  'type':['frazer'],
-                                 'coeff_1': [float(self.data['options']['coeff_1'].values)]
+                                 'coeff_a': [float(self.data['options']['coeff_a'].values)],
+                                 'coeff_s1': [float(self.data['options']['coeff_s1'].values)],
+                                 'coeff_s2': [float(self.data['options']['coeff_s2'].values)]
                                  })
         self.data['gauss'] = pd.concat([self.gaus, row_data], ignore_index=True)
         self.models['gauss'] = PandasModel(self.gaus)

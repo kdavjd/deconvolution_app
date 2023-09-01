@@ -1,16 +1,15 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 import numpy as np
 from scipy.optimize import curve_fit
-from itertools import product
+
 import threading
 from typing import Tuple
 from src.logger_config import logger
 
 
-
 class ComputeCombinationThread(QThread):
     
-    def __init__(self, x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, results_dict, lock, console_message_signal):
+    def __init__(self, x_values, y_values, combination, initial_params, maxfev, bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal):
         super().__init__()
         self.x_values = x_values
         self.y_values = y_values
@@ -19,6 +18,8 @@ class ComputeCombinationThread(QThread):
         self.maxfev = maxfev
         self.bounds = bounds
         self.coeff_1 = coeff_1
+        self.s1 = s1 
+        self.s2 = s2
         self.results_dict = results_dict
         self.lock = lock
         self.result = None
@@ -29,10 +30,10 @@ class ComputeCombinationThread(QThread):
             logger.debug(f"Запуск потока для комбинации {self.combination}.")
 
             def fit_function(x, *params):
-                return MathOperations.peaks(x, self.combination, self.coeff_1, *params)
+                return MathOperations.peaks(x, self.combination, self.coeff_1, self.s1, self.s2, *params)
 
             popt, _ = curve_fit(fit_function, self.x_values, self.y_values, p0=self.initial_params, maxfev=self.maxfev, bounds=self.bounds, method='trf')
-            predicted = MathOperations.peaks(self.x_values, self.combination, self.coeff_1, *popt)
+            predicted = MathOperations.peaks(self.x_values, self.combination, self.coeff_1, self.s1, self.s2, *popt)
             rmse = np.sqrt(np.mean((self.y_values - predicted) ** 2))
             self.result = (self.combination, popt, rmse)
             
@@ -63,9 +64,7 @@ class MathOperations:
             logger.warning(f"Получен пустой результат в handle_thread_finished")    
 
     @staticmethod
-    def gaussian(x: np.ndarray, h: float, z: float, w: float) -> np.ndarray:
-        """Гауссовская функция."""
-        h, z, w = max(0, float(h)), float(z), float(w)
+    def gaussian(x: np.ndarray, h: float, z: float, w: float) -> np.ndarray:        
         return h * np.exp(-((x - z) ** 2) / (2 * w ** 2))
 
     @staticmethod
@@ -74,46 +73,51 @@ class MathOperations:
         return dy_dx
 
     @staticmethod
-    def fraser_suzuki(x: np.array, h: float, z: float, w: float, a3: float) -> np.array:
+    def fraser_suzuki(x: np.array, h: float, z: float, w: float, a3: float) -> np.array:        
         with np.errstate(divide='ignore', invalid='ignore'):
             result = h * np.exp(-np.log(2)*((np.log(1+2*a3*((x-z)/w))/a3)**2))
         result = np.nan_to_num(result, nan=0)
         return result
+    
+    @staticmethod
+    def asymmetric_double_sigmoid(x: np.array, h: float, z: float, w: float, s1: float, s2: float) -> np.array:
+        safe_x = np.clip(x, -709, 709)       
+        term1 = 1 / (1 + np.exp(-((safe_x - z + w/2) / s1)))
+        inner_term = 1 / (1 + np.exp(-((safe_x - z - w/2) / s2)))
+        term2 = 1 - inner_term
+        result = h * term1 * term2
+        return result
 
     @staticmethod
-    def peaks(x: np.array, peak_types: list, coeff_1: list, *params: float) -> np.array:
+    def peaks(x: np.array, peak_types: list, coeff_1: list, s1: list, s2: list, *params: float) -> np.array:
         y = np.zeros_like(x)
         for i, peak_type in enumerate(peak_types):
             h = params[3*i]
             z = params[3*i+1]
             w = params[3*i+2]
-            if peak_type == 'gauss':
-                y = y + MathOperations.gaussian(x, h, z, w)
-            else: 
-                y = y + MathOperations.fraser_suzuki(x, h, z, w, coeff_1[i]) 
+        if peak_type == 'gauss':
+            y = y + MathOperations.gaussian(x, h, z, w)
+        elif peak_type == 'fraser': 
+            y = y + MathOperations.fraser_suzuki(x, h, z, w, coeff_1[i])
+        elif peak_type == 'ads':
+            y = y + MathOperations.asymmetric_double_sigmoid(x, h, z, w, s1[i], s2[i])
+
         return y
 
     @staticmethod
     def compute_best_peaks(
         x_values: np.array, y_values: np.array, num_peaks: int, 
-        initial_params: list, maxfev: int, coeff_1: list, 
+        initial_params: list, maxfev: int, coeff_1: list, s1: list, s2: list,
+        combinations: list[str], bounds: list,
         console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
         
         logger.info("Начало деконволюции пиков.")
         logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
         
-        peak_types = ['gauss', 'fraser']
-        combinations = list(product(peak_types, repeat=num_peaks))
-        
         best_rmse = np.inf
         best_popt = None
         best_combination = None
-
-        lower_bounds = [0] * num_peaks * 3
-        upper_bounds = [np.inf] * num_peaks * 3
-
-        bounds = (lower_bounds, upper_bounds)
         
         results_dict = {}  # Пустой словарь для результатов
         lock = threading.Lock()
@@ -122,7 +126,7 @@ class MathOperations:
         for combination in combinations:
             thread = ComputeCombinationThread(
                 x_values, y_values, combination, initial_params, 
-                maxfev, bounds, coeff_1, results_dict, lock, console_message_signal)
+                maxfev, bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal)
             thread.start()
             threads.append(thread)
         

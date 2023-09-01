@@ -14,7 +14,7 @@ from src.event_handler import EventHandler
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import differential_evolution
 
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
@@ -28,12 +28,13 @@ class ComputePeaksThread(QThread):
     progress_signal = pyqtSignal(float)
     finished_signal = pyqtSignal(object) # Для передачи результата
 
-    def __init__(self, x_column_name, y_column_name, initial_coefficients, constraints, event_handler, table_manager, init_params):
+    def __init__(self, x_column_name, y_column_name, coefficients, bounds, 
+                 event_handler, table_manager, init_params):
         super().__init__()
         self.x_column_name = x_column_name
         self.y_column_name = y_column_name
-        self.initial_coefficients = initial_coefficients
-        self.constraints = constraints
+        self.coefficients = coefficients
+        self.bounds = bounds
         self.is_running = True
         self.event_handler = event_handler
         self.table_manager = table_manager
@@ -50,11 +51,13 @@ class ComputePeaksThread(QThread):
         def callback(x):
             if not self.is_running:
                 raise Exception("Остановка оптимизации по требованию пользователя")
-
+        
         try:
-            result = minimize(objective, self.initial_coefficients, constraints=self.constraints, method='SLSQP', callback=callback)
+            result = differential_evolution(
+                objective, self.bounds, strategy='best2bin', popsize = 50, recombination= 0.9, mutation = 0.4, tol = 0.0001,)
             if self.is_running:
-                self.finished_signal.emit(result) # Передача результата
+                self.finished_signal.emit(result)  # Передача результата
+        
         except Exception as e:
             logger.warning(str(e))
             self.event_handler.data_handler.console_message_signal.emit(
@@ -67,10 +70,13 @@ class ComputePeaksThread(QThread):
 class MainApp(QMainWindow):
     """Главное приложение."""
     functions_data = pd.DataFrame(columns=[
-        'reaction', 'height', 'center', 'width', 'type', 'coeff_1'])
+        'reaction', 'height', 'center', 'width', 'type', 'coeff_a'])
     
     options_data = pd.DataFrame({
-        'maxfev': [1000], 'coeff_1': [-0.01], 'rmse':[0.0],'bottom_constraint':[-4], 'top_constraint':[-0.01]})
+        'maxfev': [1000], 'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 'rmse':[0.0], 
+        'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
+        's1_bottom_constraint':[0], 's1_top_constraint':[10],
+        's2_bottom_constraint':[0], 's2_top_constraint':[10]})
     
     table_dict = {
         'gauss':functions_data,'options':options_data}
@@ -125,35 +131,20 @@ class MainApp(QMainWindow):
    
     def compute_peaks(self):
         self.event_handler.data_handler.console_message_signal.emit(
-                f'\nОптимизация параметров начата.\n')
+            f'\nОптимизация параметров начата.\n')
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
 
-        if self.table_manager.data['gauss']['coeff_1'].size > 0:
-            initial_coefficients = self.table_manager.data['gauss']['coeff_1'].values
+        if self.table_manager.data['gauss']['coeff_a'].size > 0:
             
-            logger.debug(f'содержание initial_coefficients {initial_coefficients}')
-            _ = self.table_manager.data['options']['bottom_constraint'].iloc[0]
-            logger.debug(f'bottom_constraint:  {_}')
-            _ = self.table_manager.data['options']['top_constraint'].iloc[0]
-            logger.debug(f'top_constraint:  {_}')
-            
-            constraints = []
-            for i in range(len(initial_coefficients)):
-                constraints.append({
-                    'type': 'ineq', 
-                    'fun': lambda x, i=i: x[i] - float(self.table_manager.data['options']['bottom_constraint'].iloc[0])
-                })                
-                
-                constraints.append({
-                    'type': 'ineq', 
-                    'fun': lambda x, i=i: float(self.table_manager.data['options']['top_constraint'].iloc[0]) - x[i]
-                })                
+            coefficients, bounds = self.event_handler.data_handler.get_coeffs_and_bounds()
+            logger.info(f'current_coeffs: {coefficients}')
+            logger.info(f'constraints: {bounds}') 
                 
             # Создание экземпляра потока
             init_params = self.event_handler.data_handler.get_init_params()
             self.compute_peaks_thread = ComputePeaksThread(
-                x_column_name, y_column_name, initial_coefficients, constraints, 
+                x_column_name, y_column_name, coefficients, bounds, 
                 self.event_handler, self.table_manager, init_params)
 
             # Соединение сигналов с нужными слотами

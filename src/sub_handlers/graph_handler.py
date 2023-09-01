@@ -96,15 +96,28 @@ class GraphHandler(QObject):
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
             if row['type'] == 'gauss':
                 y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])
+            elif row['type'] == 'fraser':
+                y = self.math_operations.fraser_suzuki(
+                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_a']))
+                _coef = str(row['coeff_a'])
+                logger.debug(f'В rebuild_gaussians коэффициент = {_coef}')
+            elif row['type'] == 'ads':
+                y = self.math_operations.asymmetric_double_sigmoid(
+                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_s1']), float(row['coeff_s2']))
+                _coef1 = str(row['coeff_s1'])
+                _coef2 = str(row['coeff_s2'])
+                logger.debug(f'В rebuild_gaussians coeff_a = {_coef1}, coeff_2 = {_coef2}')
             else:
                 y = self.math_operations.fraser_suzuki(
-                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_1']))
-                _coef = str(row['coeff_1'])
-                logger.debug(f'В rebuild_gaussians коэффициент = {_coef}')
-            ax.plot(x, y,)
+                    x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_a']))
+                _coef = str(row['coeff_a'])
+                logger.info(f'В rebuild_gaussians отработал else вместо fraser')
+            
+            ax.plot(x, y)
             cumfunc += y
         ax.plot(x, cumfunc,)
         self.ui_initializer.canvas1.draw()
+
 
     def plot_graph(self):
         """
