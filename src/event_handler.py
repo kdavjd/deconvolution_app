@@ -16,30 +16,7 @@ class EventHandler(QObject):
         self.graph_handler = GraphHandler(main_app)
         self.data_handler = DataHandler(main_app)
         self.ui_handler = UIHandler(main_app) 
-  
-
-    def calculate_gaussian_bounds(self, initial_params):
-            lower_bounds = []
-            upper_bounds = []
-
-            # Деление initial_params на участки по 3 элемента
-            for i in range(0, len(initial_params), 3):
-                group = initial_params[i:i+3]
-
-                # Для первого элемента группы: от 0 до +50%
-                lower_bounds.append(group[0] * 0)
-                upper_bounds.append(group[0] * 1.5)
-                
-                # Для второго элемента группы: от -20% до +20%
-                lower_bounds.append(group[1] * 0.80)
-                upper_bounds.append(group[1] * 1.20)
-
-                # Для третьего элемента группы: от -40% до +40%
-                lower_bounds.append(group[2] * 0.6)
-                upper_bounds.append(group[2] * 1.4)
-
-            return (lower_bounds, upper_bounds)
-    
+   
     def get_selected_peak_types(self):
         dialog = QDialog()
         dialog.setWindowTitle("Выбор типов пиков и ограничений")
@@ -109,6 +86,10 @@ class EventHandler(QObject):
                     
             other_bounds_inputs[reaction] = {}
 
+            # Находим строку для текущей реакции в gauss_data
+            reaction_row = gauss_data[gauss_data['reaction'] == reaction]
+
+            # Для каждого параметра ('height', 'center', 'width')
             for param in ['height', 'center', 'width']:
                 param_layout = QVBoxLayout()  # новый вертикальный layout для каждого параметра
                 label = QLabel(f"{param}_bounds")
@@ -116,8 +97,12 @@ class EventHandler(QObject):
 
                 h_layout = QHBoxLayout()  # новый горизонтальный layout для полей ввода
 
-                input_lower = QLineEdit("0.0")  # поле для нижней границы
-                input_upper = QLineEdit("0.0")  # поле для верхней границы
+                # Здесь мы извлекаем соответствующие значения из таблицы
+                initial_lower_value = str(np.round(reaction_row[param].values[0]*0.8, 3)) if not reaction_row.empty else "0.0"
+                initial_upper_value = str(np.round(reaction_row[param].values[0]*1.2, 3)) if not reaction_row.empty else "0.0"
+
+                input_lower = QLineEdit(initial_lower_value)  # поле для нижней границы
+                input_upper = QLineEdit(initial_upper_value)  # поле для верхней границы
 
                 h_layout.addWidget(input_lower)  # добавляем поле для нижней границы в горизонтальный layout
                 h_layout.addWidget(input_upper)  # добавляем поле для верхней границы в горизонтальный layout
