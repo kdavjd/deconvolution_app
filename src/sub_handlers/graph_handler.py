@@ -118,7 +118,6 @@ class GraphHandler(QObject):
         ax.plot(x, cumfunc,)
         self.ui_initializer.canvas1.draw()
 
-
     def plot_graph(self):
         """
         Построение базового графика.

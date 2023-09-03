@@ -1,21 +1,17 @@
 import sys
 from io import StringIO
 import logging
-
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-
 from src.csv_viewer import CSVViewer
 from src.pandas_model import PandasModel
 from src.table_manager import TableManager
 from src.math_operations import MathOperations
 from src.ui import UIInitializer
 from src.event_handler import EventHandler
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import differential_evolution
-
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
 import scienceplots
@@ -28,24 +24,23 @@ class ComputePeaksThread(QThread):
     progress_signal = pyqtSignal(float)
     finished_signal = pyqtSignal(object) # Для передачи результата
 
-    def __init__(self, x_column_name, y_column_name, coefficients, bounds, 
-                 event_handler, table_manager, init_params):
+    def __init__(self, x_column_name, y_column_name, bounds, 
+                 event_handler, init_params, selected_peak_types):
         super().__init__()
         self.x_column_name = x_column_name
-        self.y_column_name = y_column_name
-        self.coefficients = coefficients
+        self.y_column_name = y_column_name        
         self.bounds = bounds
         self.is_running = True
-        self.event_handler = event_handler
-        self.table_manager = table_manager
+        self.event_handler = event_handler        
         self.init_params = init_params
+        self.selected_peak_types = selected_peak_types
 
     def run(self):
         def objective(coefficients):
             if not self.is_running:
                 raise Exception("Остановка оптимизации по требованию пользователя")
             best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
-                coefficients, self.x_column_name, self.y_column_name, self.init_params)
+                coefficients, self.x_column_name, self.y_column_name, self.init_params, self.selected_peak_types)
             return best_rmse
 
         def callback(x):
@@ -56,7 +51,7 @@ class ComputePeaksThread(QThread):
             result = differential_evolution(
                 objective, self.bounds, strategy='best2bin', popsize = 50, recombination= 0.9, mutation = 0.4, tol = 0.0001,)
             if self.is_running:
-                self.finished_signal.emit(result)  # Передача результата
+                self.finished_signal.emit(result)
         
         except Exception as e:
             logger.warning(str(e))
@@ -135,21 +130,24 @@ class MainApp(QMainWindow):
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()
 
+        selected_peak_types = self.event_handler.get_selected_peak_types()
+        if selected_peak_types is None:
+            return
+        
         if self.table_manager.data['gauss']['coeff_a'].size > 0:
             
-            coefficients, bounds = self.event_handler.data_handler.get_coeffs_and_bounds()
-            logger.info(f'current_coeffs: {coefficients}')
-            logger.info(f'constraints: {bounds}') 
-                
+            coefficients, bounds = self.event_handler.get_coeffs_and_bounds(selected_peak_types)
+            logger.info(f'coefficients: {coefficients}')
+            logger.info(f'constraints: {bounds}')
+            
             # Создание экземпляра потока
             init_params = self.event_handler.data_handler.get_init_params()
             self.compute_peaks_thread = ComputePeaksThread(
-                x_column_name, y_column_name, coefficients, bounds, 
-                self.event_handler, self.table_manager, init_params)
+                x_column_name, y_column_name, bounds, self.event_handler, init_params, selected_peak_types)
 
             # Соединение сигналов с нужными слотами
             self.compute_peaks_thread.finished_signal.connect(self.on_peaks_computed)
-            self.compute_peaks_thread.progress_signal.connect(self.on_progress_update)  # Если нужно обновление прогресса
+            self.compute_peaks_thread.progress_signal.connect(self.on_progress_update)
 
             # Запуск потока
             self.compute_peaks_thread.start()

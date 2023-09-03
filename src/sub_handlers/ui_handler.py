@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QObject, Qt, QModelIndex
-from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
+from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit, QDialog, QVBoxLayout, QCheckBox, QPushButton
 from .graph_handler import GraphHandler
 
 
@@ -61,16 +61,10 @@ class UIHandler(QObject):
         # Если нажата клавиша Alt, удаляем столбец.
         elif QApplication.keyboardModifiers() == Qt.AltModifier:
             self.table_manager.delete_column(q_model_index.column())
-        # Если нажата клавиша Shift, показываем диалоговое окно для редактирования.
-        elif QApplication.keyboardModifiers() == Qt.ShiftModifier:
-            # current_value = model.data(q_model_index, Qt.DisplayRole)
-            # new_value, ok = QInputDialog.getText(None, "Изменить значение", "Введите новое значение:", QLineEdit.Normal, current_value)
-            # new_value = new_value.replace(',', '.')
-            #if ok and new_value != current_value:
+        # Если нажата клавиша Shift
+        elif QApplication.keyboardModifiers() == Qt.ShiftModifier:            
+            self.graph_handler.rebuild_gaussians_signal.emit()        
             
-            self.graph_handler.rebuild_gaussians_signal.emit()                
-            self.main_app.event_handler.data_handler.console_message_signal.emit(
-                f'\nДанные применены.')
         else:
             pass
 
@@ -92,4 +86,29 @@ class UIHandler(QObject):
         self.ui_initializer.canvas1.mpl_disconnect(self.press_cid)
         self.ui_initializer.canvas1.mpl_disconnect(self.release_cid)
         # Перестроение гауссиан.
-        self.graph_handler.rebuild_gaussians()
+        self.graph_handler.rebuild_gaussians()       
+    
+
+    def get_selected_peak_types(self):
+        dialog = QDialog()
+        dialog.setWindowTitle("Выбор типов пиков")
+        layout = QVBoxLayout()
+
+        checkboxes = {}
+        for peak_type in ['gauss', 'fraser', 'ads']:
+            checkbox = QCheckBox(peak_type)
+            checkbox.setChecked(True)
+            layout.addWidget(checkbox)
+            checkboxes[peak_type] = checkbox
+
+        btn = QPushButton("Применить")
+        layout.addWidget(btn)
+        btn.clicked.connect(dialog.accept)
+
+        dialog.setLayout(layout)
+
+        if dialog.exec_():
+            selected_types = [key for key, checkbox in checkboxes.items() if checkbox.isChecked()]
+            return selected_types
+        else:
+            return None

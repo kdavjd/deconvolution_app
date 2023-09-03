@@ -57,8 +57,7 @@ class TableManager(QObject):
             self.stacked_widget.addWidget(self.tables[name])
             self.table_indexes[name] = self.stacked_widget.count() - 1  
         
-        logger.info(f"Object ID at init: {id(self)} - table names: {self.table_names}")  
-      
+        logger.info(f"Object ID at init: {id(self)} - table names: {self.table_names}")      
         
     @pyqtSlot(str)
     def get_data(self, table_name):
@@ -144,7 +143,7 @@ class TableManager(QObject):
             raise ValueError(f"Unknown table name: {table_name}")
 
         column_data = self.data[table_name][column_name]
-        # Проверяем, являются ли данные числовыми
+        
         if pd.to_numeric(column_data, errors='coerce').notna().all():
             self.column_data_returned_signal.emit(column_data)
             return column_data
