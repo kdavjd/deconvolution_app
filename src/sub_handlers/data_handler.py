@@ -31,33 +31,29 @@ class DataHandler(QObject):
         self.received_data = None
     
     def connect_signals(self):
-        self.table_manager.column_data_returned_signal.connect(self.set_received_data)
-        self.table_manager.get_data_returned_signal.connect(self.set_received_data)
+        self.table_manager.column_data_returned_signal.connect(self.store_received_data)
+        self.table_manager.get_data_returned_signal.connect(self.store_received_data)
         self.console_message_signal.connect(self.ui_initializer.update_console)
         self.refresh_gui_signal.connect(self.ui_initializer.refresh_gui)
-            
-    @pyqtSlot(object)
-    def set_received_data(self, data):
-        with self.data_condition:
-            self.received_data = data
-            self.data_condition.notify_all()
-                     
+    
+    def store_received_data(self, data):
+        self.received_data = data
+               
     def wait_for_data(self):
-        with self.data_condition:
-            while self.received_data is None:
-                self.data_condition.wait()  # Ожидание оповещения
-            data = self.received_data
-            self.received_data = None
-            return data
+        while self.received_data is None:
+            sleep(0.15) # Ждем 150 мс и проверяем снова
+        return self.received_data
     
     def retrieve_table_data(self, table_name: str) -> pd.DataFrame:
         self.table_manager.get_data_signal.emit(table_name)
-        data = self.wait_for_data()        
+        data = self.wait_for_data()
+        self.received_data = None        
         return data
       
     def retrieve_column_data(self, table_name: str, column_name: str) -> pd.Series:
         self.table_manager.get_column_data_signal.emit(table_name, column_name)
-        data = self.wait_for_data()        
+        data = self.wait_for_data()
+        self.received_data = None 
         return data
     
     def add_diff_button_pushed(self, x_column_name: str, y_column_name: str):
