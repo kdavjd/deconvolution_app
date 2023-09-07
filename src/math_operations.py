@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit
 
 import threading
@@ -81,10 +82,23 @@ class MathOperations:
     
     @staticmethod
     def asymmetric_double_sigmoid(x: np.array, h: float, z: float, w: float, s1: float, s2: float) -> np.array:
-        safe_x = np.clip(x, -709, 709)       
-        term1 = 1 / (1 + np.exp(-((safe_x - z + w/2) / s1)))
+        # Ограничиваем значения массива x, чтобы избежать переполнения при использовании np.exp()
+        safe_x = np.clip(x, -709, 709)
+        
+        # Вычисляем аргумент для экспоненты для term1
+        exp_arg = -((safe_x - z + w/2) / s1)
+        # Ограничиваем значение аргумента экспоненты, чтобы избежать переполнения
+        clipped_exp_arg = np.clip(exp_arg, -709, 709)
+        
+        # Вычисляем первое сигмоидное слагаемое
+        term1 = 1 / (1 + np.exp(clipped_exp_arg))
+        
+        # Вычисляем внутренний член для второго сигмоидного слагаемого
         inner_term = 1 / (1 + np.exp(-((safe_x - z - w/2) / s2)))
+        # Вычисляем второе сигмоидное слагаемое
         term2 = 1 - inner_term
+        
+        # Возвращаем итоговый результат: произведение константы h и двух сигмоидных слагаемых
         result = h * term1 * term2
         return result
 
@@ -95,25 +109,25 @@ class MathOperations:
             h = params[3*i]
             z = params[3*i+1]
             w = params[3*i+2]
-        if peak_type == 'gauss':
-            y = y + MathOperations.gaussian(x, h, z, w)
-        elif peak_type == 'fraser': 
-            y = y + MathOperations.fraser_suzuki(x, h, z, w, coeff_1[i])
-        elif peak_type == 'ads':
-            y = y + MathOperations.asymmetric_double_sigmoid(x, h, z, w, s1[i], s2[i])
+            if peak_type == 'gauss':
+                y = y + MathOperations.gaussian(x, h, z, w)
+            elif peak_type == 'fraser': 
+                y = y + MathOperations.fraser_suzuki(x, h, z, w, coeff_1[i])
+            elif peak_type == 'ads':
+                y = y + MathOperations.asymmetric_double_sigmoid(x, h, z, w, s1[i], s2[i])
 
         return y
 
     @staticmethod
     def compute_best_peaks(
-        x_values: np.array, y_values: np.array, num_peaks: int, 
-        initial_params: list, maxfev: int, coeff_1: list, s1: list, s2: list,
-        combinations: list[str], bounds: list,
+        x_values: np.array, y_values: np.array, 
+        peaks_params: list[float], maxfev: int, coeff_1: list[float], s1: list[float], s2: list[float],
+        combinations: list[str], peaks_bounds: list[tuple[float, float]],
         console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
         
         logger.info("Начало деконволюции пиков.")
-        logger.debug(f"Полученные начальные параметры: {str(initial_params)}, кол-во пиков: {num_peaks}")
+        logger.debug(f"Полученные начальные параметры: {peaks_params}")
         
         best_rmse = np.inf
         best_popt = None
@@ -125,8 +139,8 @@ class MathOperations:
         
         for combination in combinations:
             thread = ComputeCombinationThread(
-                x_values, y_values, combination, initial_params, 
-                maxfev, bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal)
+                x_values, y_values, combination, peaks_params, 
+                maxfev, peaks_bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal)
             thread.start()
             threads.append(thread)
         

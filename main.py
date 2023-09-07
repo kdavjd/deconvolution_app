@@ -22,25 +22,24 @@ from src.logger_config import logger
 
 class ComputePeaksThread(QThread):
     progress_signal = pyqtSignal(float)
-    finished_signal = pyqtSignal(object) # Для передачи результата
+    finished_signal = pyqtSignal(object)
 
-    def __init__(self, x_column_name, y_column_name, bounds, 
-                 event_handler, init_params, selected_peak_types):
-        super().__init__()
-        self.x_column_name = x_column_name
-        self.y_column_name = y_column_name        
-        self.bounds = bounds
+    def __init__(self, event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected):
+        super().__init__()        
         self.is_running = True
         self.event_handler = event_handler        
-        self.init_params = init_params
-        self.selected_peak_types = selected_peak_types
+        self.peaks_params = peaks_params
+        self.combinations = combinations
+        self.extracted_bounds = extracted_bounds        
+        self.peaks_bounds = peaks_bounds
+        self.selected = selected
 
     def run(self):
         def objective(coefficients):
             if not self.is_running:
                 raise Exception("Остановка оптимизации по требованию пользователя")
             best_rmse = self.event_handler.data_handler.compute_peaks_button_pushed(
-                coefficients, self.x_column_name, self.y_column_name, self.init_params, self.selected_peak_types)
+                coefficients, self.selected, self.peaks_params, self.combinations, self.peaks_bounds)
             return best_rmse
 
         def callback(x):
@@ -49,14 +48,14 @@ class ComputePeaksThread(QThread):
         
         try:
             result = differential_evolution(
-                objective, self.bounds, strategy='best2bin', popsize = 50, recombination= 0.9, mutation = 0.4, tol = 0.0001,)
+                objective, self.extracted_bounds, strategy='best2bin', popsize = 50, recombination= 0.9, mutation = 0.4, tol = 0.0001,)
             if self.is_running:
                 self.finished_signal.emit(result)
         
         except Exception as e:
             logger.warning(str(e))
             self.event_handler.data_handler.console_message_signal.emit(
-                f'\nОстановка оптимизации по требованию пользователя.\n')
+                f'\nОшибка в функции оптимизации\n {e}')
             self.finished_signal.emit(None) # Передача None, если есть ошибка
 
     def stop(self):
@@ -112,7 +111,7 @@ class MainApp(QMainWindow):
         self.viewer.df.info(buf=buffer)
         file_info = buffer.getvalue()
         self.event_handler.data_handler.console_message_signal.emit(f'Загружен CSV файл:\n {file_info}')
-        file_handler = logging.FileHandler(f'{self.viewer.file_name}.log')
+        file_handler = logging.FileHandler(f'logs_folder/{self.viewer.file_name}.log')
         logger.addHandler(file_handler)
     
     def switch_to_interactive_mode(self, activated):
@@ -125,32 +124,21 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table_signal.emit('options')    
    
     def compute_peaks(self):
-        self.event_handler.data_handler.console_message_signal.emit(
-            f'\nОптимизация параметров начата.\n')
-        x_column_name = self.ui_initializer.combo_box_x.currentText()
-        y_column_name = self.ui_initializer.combo_box_y.currentText()
-
-        selected_peak_types = self.event_handler.get_selected_peak_types()
-        if selected_peak_types is None:
+        selected, combinations, coeffs_bounds, peaks_bounds_dict = self.event_handler.fetch_peak_type_and_bounds()
+        if not selected:
             return
+        extracted_bounds = self.event_handler.extract_bounds_selected_combinations(selected, coeffs_bounds)
+        peaks_bounds = self.event_handler.extract_peaks_bounds(peaks_bounds_dict)        
+        peaks_params = self.event_handler.data_handler.get_peaks_params()        
         
-        if self.table_manager.data['gauss']['coeff_a'].size > 0:
-            
-            coefficients, bounds = self.event_handler.get_coeffs_and_bounds(selected_peak_types)
-            logger.info(f'coefficients: {coefficients}')
-            logger.info(f'constraints: {bounds}')
-            
-            # Создание экземпляра потока
-            init_params = self.event_handler.data_handler.get_init_params()
-            self.compute_peaks_thread = ComputePeaksThread(
-                x_column_name, y_column_name, bounds, self.event_handler, init_params, selected_peak_types)
+        self.compute_peaks_thread = ComputePeaksThread(self.event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected)
 
-            # Соединение сигналов с нужными слотами
-            self.compute_peaks_thread.finished_signal.connect(self.on_peaks_computed)
-            self.compute_peaks_thread.progress_signal.connect(self.on_progress_update)
+        # Соединение сигналов с нужными слотами
+        self.compute_peaks_thread.finished_signal.connect(self.on_peaks_computed)
+        self.compute_peaks_thread.progress_signal.connect(self.on_progress_update)
 
-            # Запуск потока
-            self.compute_peaks_thread.start()
+        # Запуск потока
+        self.compute_peaks_thread.start()
 
     def on_peaks_computed(self, result):
         if result:
