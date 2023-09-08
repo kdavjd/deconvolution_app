@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, QInputDialog, QTableWidgetI
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QObject, pyqtSignal
 import numpy as np
+
 from src.logger_config import logger
 
 class GraphHandler(QObject):
@@ -40,7 +41,7 @@ class GraphHandler(QObject):
         self.ui_initializer = main_app.ui_initializer
         self.math_operations = main_app.math_operations
         self.viewer = main_app.viewer
-        self.table_manager = main_app.table_manager
+        self.table_manager = main_app.table_manager        
 
         # Подключение сигналов к соответствующим слотам
         self.on_release_signal.connect(self.on_release)
@@ -92,7 +93,7 @@ class GraphHandler(QObject):
         ax = self.ui_initializer.figure1.get_axes()[0]
         cumfunc = np.zeros(1000)
         for _, row in self.table_manager.data['gauss'].iterrows():            
-            x_column_data = self.table_manager.get_column_data(self.viewer.file_name, self.ui_initializer.combo_box_x.currentText()) 
+            x_column_data = self.table_manager.data[self.viewer.file_name][self.ui_initializer.combo_box_x.currentText()]
             x = np.linspace(min(x_column_data), max(x_column_data), 1000)
             if row['type'] == 'gauss':
                 y = self.math_operations.gaussian(x, row['height'], row['center'], row['width'])

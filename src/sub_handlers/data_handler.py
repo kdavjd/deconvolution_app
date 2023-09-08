@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import logging
 from time import sleep
-import threading
+import uuid
 
 from src.logger_config import logger
 
@@ -18,8 +18,7 @@ class DataHandler(QObject):
         super().__init__()
         self.initialize_components(main_app)
         self.connect_signals()
-        self.data_lock = threading.Lock()
-        self.data_condition = threading.Condition(self.data_lock)
+        self.pending_data_requests = {}
 
     def initialize_components(self, main_app):
         self.main_app = main_app
@@ -36,24 +35,32 @@ class DataHandler(QObject):
         self.console_message_signal.connect(self.ui_initializer.update_console)
         self.refresh_gui_signal.connect(self.ui_initializer.refresh_gui)
     
-    def store_received_data(self, data):
-        self.received_data = data
+    def store_received_data(self, data, request_id):
+        self.pending_data_requests[request_id] = data
                
-    def wait_for_data(self):
-        while self.received_data is None:
-            sleep(0.15) # Ждем 150 мс и проверяем снова
-        return self.received_data
+    def wait_for_data(self, request_id):
+        while request_id not in self.pending_data_requests:
+            sleep(0.05) # Ждем 50 мс и проверяем снова
+        data = self.pending_data_requests.pop(request_id)  # получаем и удаляем данные по ключу
+        return data
     
     def retrieve_table_data(self, table_name: str) -> pd.DataFrame:
-        self.table_manager.get_data_signal.emit(table_name)
-        data = self.wait_for_data()
-        self.received_data = None        
+        request_id = uuid.uuid4()  
+        self.table_manager.get_data_signal.emit(table_name, request_id)  
+        data = self.wait_for_data(request_id)
         return data
       
     def retrieve_column_data(self, table_name: str, column_name: str) -> pd.Series:
-        self.table_manager.get_column_data_signal.emit(table_name, column_name)
-        data = self.wait_for_data()
-        self.received_data = None 
+        request_id = uuid.uuid4()  
+        self.table_manager.get_column_data_signal.emit(table_name, column_name, request_id)
+        data = self.wait_for_data(request_id)
+        return data
+    
+    def retrieve_and_log_data(self, table_name: str, column_name: str, var_name: str) -> pd.Series:
+        request_id = uuid.uuid4()
+        self.table_manager.get_column_data_signal.emit(table_name, column_name, request_id)
+        data = self.wait_for_data(request_id)
+        logger.debug(f"Полученные данные для {var_name}: \n {data}")
         return data
     
     def add_diff_button_pushed(self, x_column_name: str, y_column_name: str):
@@ -106,11 +113,6 @@ class DataHandler(QObject):
             gaussian_data.at[i, 'coeff_s2'] = coeff_s2
 
         return gaussian_data
-     
-    def retrieve_and_log_data(self, table_name: str, column_name: str, var_name: str) -> pd.Series:
-        data = self.retrieve_column_data(table_name, column_name)
-        logger.debug(f"Полученные данные для {var_name}: \n {data}")
-        return data
 
     def update_ui_and_data(self, best_params, best_combination, coeff_a, 
                            s1, s2, best_rmse, x_values, y_column_name, coefficients):
@@ -166,6 +168,8 @@ class DataHandler(QObject):
         self.update_ui_and_data(best_params, best_combination, coeff_a, s1, s2, best_rmse, x_values, y_column_name, coefficients)
 
         return best_rmse
+    
+    
 
     
 

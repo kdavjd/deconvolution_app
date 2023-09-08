@@ -2,15 +2,15 @@ from time import sleep
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QTableView, QStackedWidget
 from PyQt5.QtCore import Qt, QObject, pyqtSlot
-
 import pandas as pd
 from src.pandas_model import PandasModel
+import uuid
 
 from src.logger_config import logger
 
 class TableManager(QObject):
-    get_data_signal = pyqtSignal(str)
-    get_data_returned_signal = pyqtSignal(pd.DataFrame)
+    get_data_signal = pyqtSignal(str, uuid.UUID)
+    get_data_returned_signal = pyqtSignal(pd.DataFrame, uuid.UUID)
     update_table_signal = pyqtSignal(str, pd.DataFrame)
     fill_table_signal = pyqtSignal(str)
     add_row_signal = pyqtSignal(str, pd.DataFrame)
@@ -18,8 +18,8 @@ class TableManager(QObject):
     delete_row_signal = pyqtSignal(int)
     delete_column_signal = pyqtSignal(int)
     fill_combo_boxes_signal = pyqtSignal(str, list, bool)
-    get_column_data_signal = pyqtSignal(str, str)
-    column_data_returned_signal = pyqtSignal(object)
+    get_column_data_signal = pyqtSignal(str, str, uuid.UUID)
+    column_data_returned_signal = pyqtSignal(pd.Series, uuid.UUID)
     add_reaction_cumulative_func_signal = pyqtSignal(object, tuple, object, str, object, object)
     add_gaussian_to_table_signal = pyqtSignal(float, float, float)
 
@@ -59,14 +59,32 @@ class TableManager(QObject):
         
         logger.info(f"Object ID at init: {id(self)} - table names: {self.table_names}")      
         
-    @pyqtSlot(str)
-    def get_data(self, table_name):
+    @pyqtSlot(str, uuid.UUID)
+    def get_data(self, table_name, request_id=None):
         if table_name not in self.table_names:
-            raise ValueError(f"Unknown table name: {table_name}")
-        self.get_data_returned_signal.emit(self.data[table_name])
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")
+        
         data = self.data[table_name]
-        logger.debug(f'Переданы данные: \n {data}')
-        return self.data[table_name]
+        logger.debug(f'Переданы данные из таблицы {table_name}: \n {data}')        
+        
+        if request_id:
+            self.get_data_returned_signal.emit(data, request_id)
+        else:
+            self.get_data_returned_signal.emit(data, uuid.uuid4())
+    
+    @pyqtSlot(str, str, uuid.UUID)
+    def get_column_data(self, table_name, column_name, request_id=None):
+        logger.debug(f'get_column_data table_name: {table_name} column_name: {column_name} request_id: {request_id}')
+        
+        if table_name not in self.table_names:
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")
+
+        column_data = self.data[table_name][column_name]
+        
+        if pd.to_numeric(column_data, errors='coerce').notna().all():
+            self.column_data_returned_signal.emit(column_data, request_id)            
+        else:
+            raise ValueError(f"Колонка {column_name} в таблице {table_name} содержит non-numeric данные")
     
     @pyqtSlot(str, pd.DataFrame)
     def update_table_data(self, table_name, data):
@@ -83,7 +101,7 @@ class TableManager(QObject):
     @pyqtSlot(str)
     def fill_table(self, table_name):
         if table_name not in self.table_names:                      
-            raise ValueError(f"Unknown table name: {table_name}")        
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")        
 
         # Обновляем буфер и текущую таблицу
         self.bufer_table_name = self.current_table_name
@@ -102,10 +120,10 @@ class TableManager(QObject):
     def add_column(self, table_name, column_name, column_data):
         
         if table_name not in self.table_names:
-            raise ValueError(f"Unknown table name: {table_name}")
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")
 
         if column_name in self.data[table_name].columns:
-            raise ValueError(f"Column '{column_name}' already exists in table '{table_name}'")
+            raise ValueError(f"Колонка '{column_name}' уже сществует в таблице'{table_name}'")
 
         self.data[table_name][column_name] = column_data
         self.models[table_name] = PandasModel(self.data[table_name])
@@ -115,7 +133,7 @@ class TableManager(QObject):
     @pyqtSlot(str, pd.DataFrame)
     def add_row(self, table_name, row_data):
         if table_name not in self.table_names:
-            raise ValueError(f"Unknown table name: {table_name}")
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")
 
         self.data[table_name] = pd.concat([self.data[table_name], row_data], ignore_index=True)
         self.fill_table(table_name)
@@ -123,7 +141,7 @@ class TableManager(QObject):
     @pyqtSlot(str, list, bool)
     def fill_combo_boxes(self, table_name, combo_boxes, block_signals=False):
         if table_name not in self.table_names:
-            raise ValueError(f"Unknown table name: {table_name}")
+            raise ValueError(f"Неизвестное имя таблицы: {table_name}")
         
         columns = self.data[table_name].columns
         logger.debug(f'fill_combo_boxes table_name: {table_name}, columns: {columns}')
@@ -134,21 +152,7 @@ class TableManager(QObject):
             combo_box.clear()
             combo_box.addItems(columns)
             if block_signals:
-                combo_box.blockSignals(False)
-
-    @pyqtSlot(str, str)
-    def get_column_data(self, table_name, column_name):
-        logger.debug(f'get_column_data table_name: {table_name} column_name: {column_name}')
-        if table_name not in self.table_names:
-            raise ValueError(f"Unknown table name: {table_name}")
-
-        column_data = self.data[table_name][column_name]
-        
-        if pd.to_numeric(column_data, errors='coerce').notna().all():
-            self.column_data_returned_signal.emit(column_data)
-            return column_data
-        else:
-            raise ValueError(f"Column {column_name} in table {table_name} contains non-numeric data")
+                combo_box.blockSignals(False)    
 
     @pyqtSlot(object, tuple, object, str, object, object)
     def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func, coefficients):        
