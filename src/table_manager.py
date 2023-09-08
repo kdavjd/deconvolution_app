@@ -20,7 +20,7 @@ class TableManager(QObject):
     fill_combo_boxes_signal = pyqtSignal(str, list, bool)
     get_column_data_signal = pyqtSignal(str, str, uuid.UUID)
     column_data_returned_signal = pyqtSignal(pd.Series, uuid.UUID)
-    add_reaction_cumulative_func_signal = pyqtSignal(object, tuple, object, str, object, object)
+    add_reaction_cumulative_func_signal = pyqtSignal(object, tuple, object, str, object, object, object, object)
     add_gaussian_to_table_signal = pyqtSignal(float, float, float)
 
     def __init__(self, viewer, math_operations, table_names, table_dict):
@@ -154,14 +154,9 @@ class TableManager(QObject):
             if block_signals:
                 combo_box.blockSignals(False)    
 
-    @pyqtSlot(object, tuple, object, str, object, object)
-    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func, coefficients):        
-        logger.info(f'add_reaction_cumulative_func _coeff: {coefficients}')
-        n = len(coefficients) // 3  # Делим длину массива на общее число коэффициентов
-        coeff_a = coefficients[:n]  # Первая треть массива
-        coeff_s1 = coefficients[n:2*n]  # Вторая треть массива
-        coeff_s2 = coefficients[2*n:]  # Оставшаяся часть
-        
+    @pyqtSlot(object, tuple, object, str, object, object, object, object)
+    def add_reaction_cumulative_func(self, best_params, best_combination, x_values, y_column, cumulative_func, coeff_a, coeff_s1, coeff_s2):        
+                
         for i, peak_type in enumerate(best_combination):
             a0 = best_params[3 * i]
             a1 = best_params[3 * i + 1]

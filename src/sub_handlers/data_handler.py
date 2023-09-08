@@ -127,7 +127,7 @@ class DataHandler(QObject):
 
         cumulative_func = np.zeros(len(x_values)) 
         self.table_manager.add_reaction_cumulative_func_signal.emit(
-            best_params, best_combination, x_values, y_column_name, cumulative_func, coefficients)
+            best_params, best_combination, x_values, y_column_name, cumulative_func, coeff_a, s1, s2)
         
         self.graph_handler.rebuild_gaussians_signal.emit()
 
