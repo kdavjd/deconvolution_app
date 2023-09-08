@@ -119,6 +119,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+deconvolution_app/
+
 
 # Spyder project settings
 .spyderproject
