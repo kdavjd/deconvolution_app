@@ -49,6 +49,9 @@ class ComputeCombinationThread(QThread):
                 
         except RuntimeError:
             logger.exception(f"Не удалось подобрать комбинацию:\n {self.combination}")
+            self.console_message_signal.emit(f"Не удалось подобрать комбинацию:\n {self.combination}\n \
+                                             Попробуйте увеличить maxvef в options.\n \
+                                             или пересмотрите ограничения на форму пиков.")
         except Exception as e:
             logger.exception(f"Неожиданное исключение в потоке для комбинации:\n {self.combination}: {str(e)}")
          

@@ -24,7 +24,7 @@ class ComputePeaksThread(QThread):
     progress_signal = pyqtSignal(float)
     finished_signal = pyqtSignal(object)
 
-    def __init__(self, event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected):
+    def __init__(self, event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected, options):
         super().__init__()        
         self.is_running = True
         self.event_handler = event_handler        
@@ -33,6 +33,7 @@ class ComputePeaksThread(QThread):
         self.extracted_bounds = extracted_bounds        
         self.peaks_bounds = peaks_bounds
         self.selected = selected
+        self.options = options
 
     def run(self):
         def objective(coefficients):
@@ -48,7 +49,15 @@ class ComputePeaksThread(QThread):
         
         try:
             result = differential_evolution(
-                objective, self.extracted_bounds, strategy='best2bin', popsize = 50, recombination= 0.9, mutation = 0.4, tol = 0.0001,)
+                objective, 
+                self.extracted_bounds, 
+                strategy=self.options['strategy'].values.item(), 
+                popsize=int(self.options['popsize'].values.item()), 
+                recombination=self.options['recombination'].values.item(), 
+                mutation=self.options['mutation'].values.item(), 
+                tol=self.options['tol'].values.item(), 
+                maxiter=int(self.options['maxiter'].values.item())
+            )
             if self.is_running:
                 self.finished_signal.emit(result)
         
@@ -67,10 +76,11 @@ class MainApp(QMainWindow):
         'reaction', 'height', 'center', 'width', 'type', 'coeff_a'])
     
     options_data = pd.DataFrame({
-        'maxfev': [1000], 'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 'rmse':[0.0], 
-        'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
+        'maxfev': [1000], 'popsize': [5], 'maxiter': [5], 'recombination': [0.9], 'coeff_s2': [1], 'mutation':[0.7], 
+        'tol':[0.1], 'strategy':['best2bin'], 'rmse':[0.0], 'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 
+        'rmse':[0.0], 'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
         's1_bottom_constraint':[0], 's1_top_constraint':[10],
-        's2_bottom_constraint':[0], 's2_top_constraint':[10]})
+        's2_bottom_constraint':[0], 's2_top_constraint':[10],})
     
     table_dict = {
         'gauss':functions_data,'options':options_data}
@@ -131,7 +141,7 @@ class MainApp(QMainWindow):
         peaks_bounds = self.event_handler.extract_peaks_bounds(peaks_bounds_dict)        
         peaks_params = self.event_handler.data_handler.get_peaks_params()        
         
-        self.compute_peaks_thread = ComputePeaksThread(self.event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected)
+        self.compute_peaks_thread = ComputePeaksThread(self.event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected, self.table_manager.data['options'])
 
         # Соединение сигналов с нужными слотами
         self.compute_peaks_thread.finished_signal.connect(self.on_peaks_computed)
