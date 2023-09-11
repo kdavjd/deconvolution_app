@@ -112,7 +112,7 @@ class GraphHandler(QObject):
                 y = self.math_operations.fraser_suzuki(
                     x, float(row['height']), float(row['center']), float(row['width']), float(row['coeff_a']))
                 _coef = str(row['coeff_a'])
-                logger.info(f'В rebuild_gaussians отработал else вместо fraser')
+                logger.debug(f'В rebuild_gaussians отработал else вместо fraser')
             
             ax.plot(x, y)
             cumfunc += y

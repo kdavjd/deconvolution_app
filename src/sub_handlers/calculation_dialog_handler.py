@@ -31,6 +31,10 @@ class UIDialogHandler():
         btn.clicked.connect(dialog.accept)
         dialog.layout().addWidget(btn)
         
+        calibration_btn = QPushButton("Калибровка")
+        calibration_btn.clicked.connect(lambda: self.set_calibration(coeffs_bounds_inputs))
+        dialog.layout().addWidget(calibration_btn)
+        
         return checkboxes, coeffs_bounds_inputs, peaks_params_inputs    
     
     def create_group_box(self, reaction):
@@ -83,12 +87,48 @@ class UIDialogHandler():
         else:
             return []
         
-    def get_initial_values(self, constraint, reaction_row, constraint_to_column):
-        base_value = float(reaction_row[constraint_to_column[constraint]].values[0]) if not reaction_row.empty else 0.0
-        if "bottom" in constraint:
-            return str(base_value * 0.8)
+    def get_initial_values(self, constraint, reaction_row, constraint_to_column, calibration=False):
+        logger.debug(f"get_initial_values constraint: {constraint}, calibration: {calibration}")
+
+        if calibration and reaction_row is not None and constraint_to_column is not None:
+            base_value = float(reaction_row[constraint_to_column[constraint]].values[0]) if not reaction_row.empty else 0.0
+            result = str(base_value * 0.8) if "bottom" in constraint else str(base_value * 1.2)
+            logger.debug(f"Returning calibrated value: {result}")
+            return result
+        elif calibration:
+            calibration_values = {
+                'a_bottom_constraint': '-2',
+                'a_top_constraint': '2',
+                's1_bottom_constraint': '0.1',
+                's2_bottom_constraint': '0.1',
+                's1_top_constraint': '35',
+                's2_top_constraint': '35'
+            }
+            result = calibration_values.get(constraint, "")
+            logger.debug(f"get_initial_values calibration return value: {result}")
+            return result
         else:
-            return str(base_value * 1.2)
+            base_value = float(reaction_row[constraint_to_column[constraint]].values[0]) if not reaction_row.empty else 0.0
+            result = str(base_value * 0.8) if "bottom" in constraint else str(base_value * 1.2)
+            logger.debug(f"get_initial_values base value: {result}")  # Добавлено для отладки
+            return result
+            
+    def set_calibration(self, coeffs_bounds_inputs): 
+        # Проходим по каждому типу пика (например, Reaction_1, Reaction_2, и т.д.)
+        for peak_type, constraints in coeffs_bounds_inputs.items():
+            logger.debug(f"Processing peak_type: {peak_type}")
+
+            # Затем проходим по каждому типу ограничения (например, gauss, fraser, и т.д.)
+            for constraint_type, input_fields in constraints.items():
+                logger.debug(f"Processing constraint_type: {constraint_type}")
+
+                # Если input_fields является словарем, проходим по его элементам
+                if isinstance(input_fields, dict):
+                    for constraint, input_field in input_fields.items():
+                        # Проверяем, является ли input_field объектом QLineEdit
+                        if isinstance(input_field, QLineEdit):
+                            logger.debug(f"Setting value for input field {constraint} within bounds for constraint_type: {constraint_type}")
+                            input_field.setText(self.get_initial_values(constraint, None, None, calibration=True))
     
     def create_peak_type_bounds(self, peak_type, layout, reaction_row, constraint_to_column):
         bounds = {}
