@@ -109,9 +109,13 @@ class UIDialogHandler():
             return result
         else:
             base_value = float(reaction_row[constraint_to_column[constraint]].values[0]) if not reaction_row.empty else 0.0
+        if base_value < 0:
+            result = str(base_value * 1.2) if "bottom" in constraint else str(base_value * 0.8)
+        else:
             result = str(base_value * 0.8) if "bottom" in constraint else str(base_value * 1.2)
-            logger.debug(f"get_initial_values base value: {result}")  # Добавлено для отладки
-            return result
+        
+        logger.debug(f"get_initial_values base value: {result}")  # Добавлено для отладки
+        return result
             
     def set_calibration(self, coeffs_bounds_inputs): 
         # Проходим по каждому типу пика (например, Reaction_1, Reaction_2, и т.д.)
