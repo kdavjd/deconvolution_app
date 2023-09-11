@@ -121,7 +121,7 @@ class DataHandler(QObject):
             best_params, best_combination, coeff_a, s1, s2)
         
         self.table_manager.update_table_signal.emit('gauss', best_gaussian_data)
-        self.console_message_signal.emit(f'Лучшее RMSE: {best_rmse:.5f}\n')
+        self.console_message_signal.emit(f'Новое лучшее RMSE: {best_rmse:.5f}\n')
         self.console_message_signal.emit(f'Лучшая комбинация пиков: {best_combination}\n\n')
         self.refresh_gui_signal.emit()
 
@@ -151,8 +151,9 @@ class DataHandler(QObject):
         self, coefficients: list[float], selected: dict, peaks_params: list[float], combinations: list[tuple[str,...]], peaks_bounds: list[tuple[float, float]]) -> float:
         logger.debug(f'Получены coefficients: {coefficients}')
               
-        self.modify_gauss_dataframe(selected, coefficients)  
-        
+        self.modify_gauss_dataframe(selected, coefficients) 
+         
+        options_data = self.retrieve_table_data('options')
         x_column_name = self.ui_initializer.combo_box_x.currentText()
         y_column_name = self.ui_initializer.combo_box_y.currentText()      
         x_values = self.retrieve_and_log_data(self.viewer.file_name, x_column_name, 'x_values').astype(float).to_list()
@@ -160,12 +161,18 @@ class DataHandler(QObject):
         coeff_a = self.retrieve_and_log_data('gauss', 'coeff_a', 'coeff_a').astype(float).to_list()
         s1 = self.retrieve_and_log_data('gauss', 'coeff_s1', 'coeff_s1').astype(float).to_list()
         s2 = self.retrieve_and_log_data('gauss', 'coeff_s2', 'coeff_s2').astype(float).to_list()
-        maxfev = self.retrieve_and_log_data('options', 'maxfev', 'maxfev').astype(int).item()
-                
+        maxfev = options_data['maxfev'].astype(int).item()        
+               
         best_params, best_combination, best_rmse = self.math_operations.compute_best_peaks(
             x_values, y_values, peaks_params, maxfev, coeff_a, s1, s2, combinations, peaks_bounds, self.console_message_signal)
 
-        self.update_ui_and_data(best_params, best_combination, coeff_a, s1, s2, best_rmse, x_values, y_column_name, coefficients)
+        if best_rmse < options_data['rmse'].astype(float).item():
+            options_data['rmse'] = best_rmse
+            self.table_manager.update_table_signal.emit('options', options_data)            
+            self.update_ui_and_data(best_params, best_combination, coeff_a, s1, s2, best_rmse, x_values, y_column_name, coefficients)
+        else:
+            self.console_message_signal.emit(f'\nУлучшения нет. Лучшее RMSE: {best_rmse:.5f}\n')
+            self.console_message_signal.emit(f'Лучшая комбинация пиков: {best_combination}\n\n')
 
         return best_rmse
     
