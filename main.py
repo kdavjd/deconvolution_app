@@ -12,6 +12,7 @@ from src.event_handler import EventHandler
 import numpy as np
 import pandas as pd
 from scipy.optimize import differential_evolution
+import pathlib
 # Импортируем matplotlib и применяем стиль
 import matplotlib.pyplot as plt
 import scienceplots
@@ -53,9 +54,9 @@ class ComputePeaksThread(QThread):
                 self.extracted_bounds, 
                 strategy=self.options['strategy'].values.item(), 
                 popsize=int(self.options['popsize'].values.item()), 
-                recombination=self.options['recombination'].values.item(), 
-                mutation=self.options['mutation'].values.item(), 
-                tol=self.options['tol'].values.item(), 
+                recombination=float(self.options['recombination'].values.item()),
+                mutation=float(self.options['mutation'].values.item()), 
+                tol=float(self.options['tol'].values.item()), 
                 maxiter=int(self.options['maxiter'].values.item())
             )
             if self.is_running:
@@ -78,7 +79,7 @@ class MainApp(QMainWindow):
     options_data = pd.DataFrame({
         'maxfev': [1000], 'popsize': [5], 'maxiter': [5], 'recombination': [0.9], 'coeff_s2': [1], 'mutation':[0.7], 
         'tol':[0.1], 'strategy':['best2bin'], 'rmse':[0.0], 'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 
-        'rmse':[0.0], 'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
+        'rmse':[1000], 'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
         's1_bottom_constraint':[0], 's1_top_constraint':[10],
         's2_bottom_constraint':[0], 's2_top_constraint':[10],})
     
@@ -121,7 +122,9 @@ class MainApp(QMainWindow):
         self.viewer.df.info(buf=buffer)
         file_info = buffer.getvalue()
         self.event_handler.data_handler.console_message_signal.emit(f'Загружен CSV файл:\n {file_info}')
-        file_handler = logging.FileHandler(f'logs_folder/{self.viewer.file_name}.log')
+        bp = pathlib.Path().absolute() / 'logs_folder'
+        bp.mkdir(exist_ok=True, parents=True)
+        file_handler = logging.FileHandler(bp / f'{self.viewer.file_name}.log')
         logger.addHandler(file_handler)
     
     def switch_to_interactive_mode(self, activated):
@@ -134,11 +137,11 @@ class MainApp(QMainWindow):
         self.table_manager.fill_table_signal.emit('options')    
    
     def compute_peaks(self):
-        selected, combinations, coeffs_bounds, peaks_bounds_dict = self.event_handler.fetch_peak_type_and_bounds()
+        selected, combinations, coeffs_bounds, peaks_bounds_dict = self.event_handler.calculation_dialog_handler.fetch_peak_type_and_bounds()
         if not selected:
             return
-        extracted_bounds = self.event_handler.extract_bounds_selected_combinations(selected, coeffs_bounds)
-        peaks_bounds = self.event_handler.extract_peaks_bounds(peaks_bounds_dict)        
+        extracted_bounds = self.event_handler.calculation_dialog_handler.extract_bounds_selected_combinations(selected, coeffs_bounds)
+        peaks_bounds = self.event_handler.calculation_dialog_handler.extract_peaks_bounds(peaks_bounds_dict)        
         peaks_params = self.event_handler.data_handler.get_peaks_params()        
         
         self.compute_peaks_thread = ComputePeaksThread(self.event_handler, peaks_params, combinations, extracted_bounds, peaks_bounds, selected, self.table_manager.data['options'])
