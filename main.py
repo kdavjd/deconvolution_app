@@ -78,7 +78,8 @@ class MainApp(QMainWindow):
     
     options_data = pd.DataFrame({
         'maxfev': [1000], 'popsize': [5], 'maxiter': [5], 'recombination': [0.9], 'coeff_s2': [1], 'mutation':[0.7], 
-        'tol':[0.1], 'strategy':['best2bin'], 'rmse':[0.0], 'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 
+        'tol':[0.1], 'strategy':['best2bin'], 'rmse':[0.0], 'window_length':[11],'polyorder':[3], 'Savitzky_mode':['nearest'],
+        'coeff_a': [-0.01], 'coeff_s1': [1], 'coeff_s2': [1], 
         'rmse':[1000], 'a_bottom_constraint':[-4], 'a_top_constraint':[-0.01], 
         's1_bottom_constraint':[0], 's1_top_constraint':[10],
         's2_bottom_constraint':[0], 's2_top_constraint':[10],})

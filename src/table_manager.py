@@ -121,14 +121,10 @@ class TableManager(QObject):
         
         if table_name not in self.table_names:
             raise ValueError(f"Неизвестное имя таблицы: {table_name}")
-
-        if column_name in self.data[table_name].columns:
-            raise ValueError(f"Колонка '{column_name}' уже сществует в таблице'{table_name}'")
-
+        
         self.data[table_name][column_name] = column_data
         self.models[table_name] = PandasModel(self.data[table_name])
-        self.tables[table_name].setModel(self.models[table_name])
-        
+        self.tables[table_name].setModel(self.models[table_name])        
 
     @pyqtSlot(str, pd.DataFrame)
     def add_row(self, table_name, row_data):

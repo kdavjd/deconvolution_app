@@ -1,10 +1,9 @@
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from .graph_handler import GraphHandler
-from itertools import product
 import numpy as np
 import pandas as pd
-import logging
+from scipy import signal
 from time import sleep
 import uuid
 
@@ -68,8 +67,19 @@ class DataHandler(QObject):
         x_values = self.retrieve_column_data(self.viewer.file_name, x_column_name)
         y_values = self.retrieve_column_data(self.viewer.file_name, y_column_name)        
         dy_dx = self.math_operations.compute_derivative(x_values, y_values)
-        self.update_data_after_add_diff(dy_dx, y_column_name)
-
+        options_data = self.retrieve_table_data('options')
+        if options_data['window_length'].astype(int).item() <= options_data['polyorder'].astype(int).item():
+            options_data['window_length'] = 1
+            options_data['polyorder'] = 0
+            self.console_message_signal.emit(f'\n Ошибка! Сглаживание не применено.\nЗначение window_length должно быть больше polyorder\n')
+        dy_dx_smooth = signal.savgol_filter(
+            dy_dx, 
+            window_length=options_data['window_length'].astype(int).item(),
+            polyorder=options_data['polyorder'].astype(int).item(), 
+            mode=options_data['Savitzky_mode'].astype(str).item())
+        
+        self.update_data_after_add_diff(dy_dx_smooth, y_column_name)
+            
     def update_data_after_add_diff(self, derivative_array: np.array, y_column_name: str):
         new_column_name = f"{y_column_name}_diff"
         self.table_manager.add_column_signal.emit(
