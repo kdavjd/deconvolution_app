@@ -3,6 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from .graph_handler import GraphHandler
 import numpy as np
 import pandas as pd
+from sklearn.metrics import r2_score
 from scipy import signal
 from time import sleep
 import uuid
@@ -138,6 +139,11 @@ class DataHandler(QObject):
         cumulative_func = np.zeros(len(x_values)) 
         self.table_manager.add_reaction_cumulative_func_signal.emit(
             best_params, best_combination, x_values, y_column_name, cumulative_func, coeff_a, s1, s2)
+        
+        y_values = self.retrieve_column_data(self.viewer.file_name, y_column_name)
+        cumulative_values = self.retrieve_column_data(self.viewer.file_name, y_column_name + '_cumulative')
+        r2 = r2_score(y_values, cumulative_values)
+        self.console_message_signal.emit(f'R2 score: {r2:.5f}\n')
         
         self.graph_handler.rebuild_gaussians_signal.emit()
 

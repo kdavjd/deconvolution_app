@@ -156,7 +156,7 @@ class MainApp(QMainWindow):
 
     def on_peaks_computed(self, result):
         if result:
-            best_coefficients = result.x
+            best_coefficients = result.x            
             logger.info(f'Лучшие значения коэффициентов = {best_coefficients}')
             self.event_handler.data_handler.console_message_signal.emit(
                 f'Оптимизация завершена. Лучшие параметры:\n {best_coefficients}')

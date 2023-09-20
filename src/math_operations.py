@@ -120,17 +120,36 @@ class MathOperations:
                 y = y + MathOperations.asymmetric_double_sigmoid(x, h, z, w, s1[i], s2[i])
 
         return y
+    
+    @staticmethod
+    def check_and_adjust_params_within_bounds(peaks_params: list[float], peaks_bounds: tuple[list[float], list[float]]) -> list[float]:
+        lower_bounds, upper_bounds = peaks_bounds
+        adjusted_params = []
+        
+        for param, lower, upper in zip(peaks_params, lower_bounds, upper_bounds):
+            if param < lower:
+                adjusted_params.append(lower)
+            elif param > upper:
+                adjusted_params.append(upper)
+            else:
+                adjusted_params.append(param)
+                
+        return adjusted_params
 
+    
     @staticmethod
     def compute_best_peaks(
         x_values: np.array, y_values: np.array, 
         peaks_params: list[float], maxfev: int, coeff_1: list[float], s1: list[float], s2: list[float],
-        combinations: list[str], peaks_bounds: list[tuple[float, float]],
+        combinations: list[str], peaks_bounds: tuple[list[float], list[float]],
         console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
         
         logger.info("Начало деконволюции пиков.")
         logger.debug(f"Полученные начальные параметры: {peaks_params}")
+        logger.debug(f"Полученные peaks_bounds: {peaks_bounds}")
+        
+        adjusted_params = MathOperations.check_and_adjust_params_within_bounds(peaks_params, peaks_bounds)
         
         best_rmse = np.inf
         best_popt = None
@@ -142,7 +161,7 @@ class MathOperations:
         
         for combination in combinations:
             thread = ComputeCombinationThread(
-                x_values, y_values, combination, peaks_params, 
+                x_values, y_values, combination, adjusted_params, 
                 maxfev, peaks_bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal)
             thread.start()
             threads.append(thread)
