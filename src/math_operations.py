@@ -122,7 +122,7 @@ class MathOperations:
         return y
     
     @staticmethod
-    def check_and_adjust_params_within_bounds(peaks_params: list[float], peaks_bounds: tuple[list[float], list[float]]) -> list[float]:
+    def check_and_adjust_params_within_bounds(peaks_params: list[str], peaks_bounds: tuple[list[float], list[float]]) -> list[float]:
         lower_bounds, upper_bounds = peaks_bounds
         adjusted_params = []
         
@@ -140,7 +140,7 @@ class MathOperations:
     @staticmethod
     def compute_best_peaks(
         x_values: np.array, y_values: np.array, 
-        peaks_params: list[float], maxfev: int, coeff_1: list[float], s1: list[float], s2: list[float],
+        peaks_params: list[str], maxfev: int, coeff_1: list[float], s1: list[float], s2: list[float],
         combinations: list[str], peaks_bounds: tuple[list[float], list[float]],
         console_message_signal: pyqtSignal
         ) -> Tuple[np.array, Tuple[str, ...], float]:
@@ -149,7 +149,8 @@ class MathOperations:
         logger.debug(f"Полученные начальные параметры: {peaks_params}")
         logger.debug(f"Полученные peaks_bounds: {peaks_bounds}")
         
-        adjusted_params = MathOperations.check_and_adjust_params_within_bounds(peaks_params, peaks_bounds)
+        float_peaks_params = list(map(float, peaks_params))
+        adjusted_params = MathOperations.check_and_adjust_params_within_bounds(float_peaks_params, peaks_bounds)
         
         best_rmse = np.inf
         best_popt = None
