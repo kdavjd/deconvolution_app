@@ -122,15 +122,14 @@ class MathOperations:
         return y
     
     @staticmethod
-    def check_and_adjust_params_within_bounds(peaks_params: list[str], peaks_bounds: tuple[list[float], list[float]]) -> list[float]:
+    def check_and_adjust_params_within_bounds(float_peaks_params: list[float], peaks_bounds: tuple[list[float], list[float]]) -> list[float]:
         lower_bounds, upper_bounds = peaks_bounds
         adjusted_params = []
         
-        for param, lower, upper in zip(peaks_params, lower_bounds, upper_bounds):
-            if param < lower:
-                adjusted_params.append(lower)
-            elif param > upper:
-                adjusted_params.append(upper)
+        for param, lower, upper in zip(float_peaks_params, lower_bounds, upper_bounds):            
+            mid_value = (upper + lower) / 2            
+            if param < lower or param > upper:
+                adjusted_params.append(mid_value)            
             else:
                 adjusted_params.append(param)
                 
@@ -149,8 +148,8 @@ class MathOperations:
         logger.debug(f"Полученные начальные параметры: {peaks_params}")
         logger.debug(f"Полученные peaks_bounds: {peaks_bounds}")
         
-        float_peaks_params = list(map(float, peaks_params))
-        adjusted_params = MathOperations.check_and_adjust_params_within_bounds(float_peaks_params, peaks_bounds)
+        #float_peaks_params = list(map(float, peaks_params))
+        #adjusted_params = MathOperations.check_and_adjust_params_within_bounds(float_peaks_params, peaks_bounds)
         
         best_rmse = np.inf
         best_popt = None
@@ -162,7 +161,7 @@ class MathOperations:
         
         for combination in combinations:
             thread = ComputeCombinationThread(
-                x_values, y_values, combination, adjusted_params, 
+                x_values, y_values, combination, peaks_params, 
                 maxfev, peaks_bounds, coeff_1, s1, s2, results_dict, lock, console_message_signal)
             thread.start()
             threads.append(thread)
