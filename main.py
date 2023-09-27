@@ -181,7 +181,7 @@ class MainApp(QMainWindow):
         self.event_handler.graph_handler.plot_graph_signal.emit()
         
     def create_new_table():        
-        pass
+        pass   
     
 
 if __name__ == '__main__':

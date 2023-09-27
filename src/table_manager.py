@@ -1,10 +1,11 @@
 from time import sleep
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QTableView, QStackedWidget
+from PyQt5.QtWidgets import QTableView, QStackedWidget, QFileDialog
 from PyQt5.QtCore import Qt, QObject, pyqtSlot
 import pandas as pd
 from src.pandas_model import PandasModel
 import uuid
+import os
 
 from src.logger_config import logger
 
@@ -205,5 +206,24 @@ class TableManager(QObject):
         self.data[self.current_table_name] = self.data[self.current_table_name].drop(columns=[column_name])
         self.models[self.current_table_name] = PandasModel(self.data[self.current_table_name])
         self.tables[self.current_table_name].setModel(self.models[self.current_table_name])  
-
-
+                
+    def save_table_to_csv(self, table_name='gauss'):
+        logger.info('Метод save_table_to_csv вызван.') 
+        
+        if table_name in self.data.keys():            
+            logger.info(f'Таблица {table_name} существует в области видимости.')
+            df_to_save = self.data[table_name]            
+            
+            logger.info(f'Сохраняем следующий DataFrame: {df_to_save.head()}') 
+            file_name, _ = QFileDialog.getSaveFileName(None, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)')            
+            if file_name:
+                logger.info(f'Файл сохранится как: {file_name}')        
+                try:
+                    df_to_save.to_csv(file_name, index=False, encoding='utf-8')
+                    logger.info('Файл успешно сохранен.')                    
+                except Exception as e: 
+                    logger.error(f'Ошибка в процессе сохранения файла: {e}')                    
+            else:
+                logger.warning('Имя файла не выбрано.')
+        else:
+            logger.warning(f'Таблица {table_name} не найдена в области видимости.')

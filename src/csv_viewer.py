@@ -44,3 +44,5 @@ class CSVViewer: # Класс отвечает за обработку CSV фа�
         self.file_name, _ = QFileDialog.getSaveFileName(None, 'Save CSV', os.getenv('HOME'), 'CSV(*.csv)') 
         if self.file_name: 
             self.df.to_csv(self.file_name, index=False, encoding='utf-8') #
+    
+    

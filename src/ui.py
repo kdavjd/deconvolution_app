@@ -73,6 +73,7 @@ class UIInitializer(QWidget):
     def create_buttons(self):
         self.button_load_csv = self.create_button('Load CSV', self.parent.load_csv_table)
         self.button_export_csv = self.create_button('Export CSV', self.viewer.export_csv)
+        self.button_export_coeffs = self.create_button('Save coeffs', lambda: self.parent.table_manager.save_table_to_csv(table_name='gauss'))
         self.button_compute_peaks = self.create_button('Compute peaks', self.parent.compute_peaks)
         self.button_interactive = self.create_button('Interactive Mode', self.parent.switch_to_interactive_mode, checkable=True)
         self.button_add_diff = self.create_button('Add Diff', self.parent.add_diff)
@@ -93,6 +94,7 @@ class UIInitializer(QWidget):
         buttons_layout = QVBoxLayout()
         buttons_layout.addWidget(self.button_load_csv)
         buttons_layout.addWidget(self.button_export_csv)
+        buttons_layout.addWidget(self.button_export_coeffs)
         buttons_layout.addWidget(self.button_options_mode)     
         buttons_layout.addWidget(self.button_compute_peaks)
         buttons_layout.addWidget(self.button_interactive)
