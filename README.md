@@ -1,11 +1,11 @@
 ![Last Commit](https://img.shields.io/github/last-commit/kdavjd/deconvolution_app)
-![Python 3.11.5](https://img.shields.io/badge/python-3.11.5-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11.5-blue.svg)
 ![pyqt](https://img.shields.io/badge/-pyqt-green)
 ![scipy](https://img.shields.io/badge/-scipy-red)
 ![pandas](https://img.shields.io/badge/-pandas-blueviolet)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-# drconvolution_app
+# deconvolution_app
 
 ## Описание
 
